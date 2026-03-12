@@ -1,0 +1,79 @@
+///|
+fn read_u32_le(data : Bytes, offset : Int) -> Int {
+  data[offset].to_int() |
+  (data[offset + 1].to_int() << 8) |
+  (data[offset + 2].to_int() << 16) |
+  (data[offset + 3].to_int() << 24)
+}
+
+///|
+fn match_fourcc(data : Bytes, offset : Int, expected : Bytes) -> Bool {
+  data[offset] == expected[0] &&
+  data[offset + 1] == expected[1] &&
+  data[offset + 2] == expected[2] &&
+  data[offset + 3] == expected[3]
+}
+
+///|
+fn read_chunk_type(data : Bytes, offset : Int) -> ChunkType {
+  if match_fourcc(data, offset, b"VP8 ") {
+    ChunkType::VP8
+  } else if match_fourcc(data, offset, b"VP8L") {
+    ChunkType::VP8L
+  } else if match_fourcc(data, offset, b"VP8X") {
+    ChunkType::VP8X
+  } else if match_fourcc(data, offset, b"ALPH") {
+    ChunkType::ALPH
+  } else if match_fourcc(data, offset, b"ANIM") {
+    ChunkType::ANIM
+  } else if match_fourcc(data, offset, b"ANMF") {
+    ChunkType::ANMF
+  } else if match_fourcc(data, offset, b"ICCP") {
+    ChunkType::ICCP
+  } else if match_fourcc(data, offset, b"EXIF") {
+    ChunkType::EXIF
+  } else if match_fourcc(data, offset, b"XMP ") {
+    ChunkType::XMP
+  } else {
+    let cc = Bytes::makei(4, fn(i) { data[offset + i] })
+    ChunkType::Unknown(cc)
+  }
+}
+
+///|
+pub fn parse(data : Bytes) -> WebPFile? {
+  if data.length() < 12 {
+    return None
+  }
+  // Check RIFF magic
+  if not(match_fourcc(data, 0, b"RIFF")) {
+    return None
+  }
+  let file_size = read_u32_le(data, 4)
+  // Check WEBP signature
+  if not(match_fourcc(data, 8, b"WEBP")) {
+    return None
+  }
+  // Parse chunks starting at offset 12
+  let chunks : Array[Chunk] = []
+  let mut pos = 12
+  let end = if file_size + 8 < data.length() {
+    file_size + 8
+  } else {
+    data.length()
+  }
+  while pos + 8 <= end {
+    let chunk_type = read_chunk_type(data, pos)
+    let chunk_size = read_u32_le(data, pos + 4)
+    let data_offset = pos + 8
+    chunks.push({ chunk_type, offset: data_offset, size: chunk_size })
+    // RIFF chunks are padded to even size
+    let padded_size = if chunk_size % 2 == 0 {
+      chunk_size
+    } else {
+      chunk_size + 1
+    }
+    pos = data_offset + padded_size
+  }
+  Some({ file_size, chunks })
+}
