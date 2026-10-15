@@ -5,7 +5,7 @@ let hex_chars : FixedArray[Char] = [
 
 ///|
 fn bytes_to_hex(data : FixedArray[Byte]) -> String {
-  let buf = StringBuilder::new()
+  let buf = StringBuilder()
   for i = 0; i < data.length(); i = i + 1 {
     let b = data[i].to_int()
     buf.write_char(hex_chars[b >> 4])

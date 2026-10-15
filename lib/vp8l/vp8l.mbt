@@ -63,7 +63,7 @@ pub fn decode_vp8l(webp_data : Bytes) -> ImageData raise DecodeError {
           buf, current_width, height, size_bits, data,
         )
       Some(SubtractGreen) =>
-        apply_subtract_green_bounded(buf, current_width * height)
+        @transform.apply_subtract_green(buf, current_width * height)
       Some(ColorIndexingTransform(table_size~, data~)) => {
         current_width = width
         @transform.apply_color_indexing(
@@ -75,21 +75,4 @@ pub fn decode_vp8l(webp_data : Bytes) -> ImageData raise DecodeError {
   }
   let result = Bytes::makei(full_size, fn(i) { buf[i] })
   { width, height, data: result, }
-}
-
-// Subtract green bounded by pixel count (not full array length)
-
-///|
-fn apply_subtract_green_bounded(
-  data : FixedArray[Byte],
-  num_pixels : Int32,
-) -> Unit {
-  let end = num_pixels * 4
-  let mut i = 0
-  while i + 3 < end {
-    let g = data[i + 1]
-    data[i] = data[i] + g
-    data[i + 2] = data[i + 2] + g
-    i += 4
-  }
 }

@@ -12,7 +12,7 @@ test "subtract_green basic" {
   // pixel: R=10, G=20, B=30, A=255
   // After: R=(10+20)&0xFF=30, G=20, B=(30+20)&0xFF=50, A=255
   let data : FixedArray[Byte] = [10, 20, 30, 255]
-  apply_subtract_green(data)
+  apply_subtract_green(data, 1)
   assert_eq(data[0].to_int(), 30)
   assert_eq(data[1].to_int(), 20)
   assert_eq(data[2].to_int(), 50)
@@ -23,7 +23,7 @@ test "subtract_green basic" {
 test "subtract_green wrapping" {
   // R=250, G=20 -> (250+20)&0xFF = 14 (wraps)
   let data : FixedArray[Byte] = [250, 20, 200, 128]
-  apply_subtract_green(data)
+  apply_subtract_green(data, 1)
   assert_eq(data[0].to_int(), 14) // (250+20) & 0xFF
   assert_eq(data[2].to_int(), 220) // (200+20) & 0xFF
 }
@@ -31,7 +31,7 @@ test "subtract_green wrapping" {
 ///|
 test "subtract_green multiple pixels" {
   let data : FixedArray[Byte] = [10, 20, 30, 255, 100, 50, 200, 128]
-  apply_subtract_green(data)
+  apply_subtract_green(data, 2)
   assert_eq(data[0].to_int(), 30) // 10+20
   assert_eq(data[2].to_int(), 50) // 30+20
   assert_eq(data[4].to_int(), 150) // 100+50
@@ -186,6 +186,14 @@ test "color_transform only touches the given rows" {
   apply_color_transform(data, 1, 1, 2, transform)
   assert_eq(data[0].to_int(), 1)
   assert_eq(data[4].to_int(), 0) // second row is outside the image
+}
+
+///|
+test "subtract_green stops at num_pixels" {
+  let data : FixedArray[Byte] = [10, 20, 30, 255, 100, 50, 200, 128]
+  apply_subtract_green(data, 1)
+  assert_eq(data[0].to_int(), 30) // 10+20
+  assert_eq(data[4].to_int(), 100) // outside the image
 }
 
 ///|

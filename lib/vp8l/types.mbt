@@ -13,7 +13,7 @@ pub(all) struct ImageData {
 ///|
 priv struct ColorCache {
   bits : Int32
-  data : FixedArray[FixedArray[Byte]]
+  data : FixedArray[Int32] // packed ARGB
 }
 
 ///|

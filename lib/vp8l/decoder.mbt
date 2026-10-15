@@ -143,13 +143,7 @@ fn LosslessDecoder::decode_image_stream(
 ) -> Unit raise DecodeError {
   let color_cache_bits = self.read_color_cache()
   let color_cache : ColorCache? = match color_cache_bits {
-    Some(bits) =>
-      Some({
-        bits,
-        data: FixedArray::makei(1 << bits, fn(_i) {
-          FixedArray::make(4, b'\x00')
-        }),
-      })
+    Some(bits) => Some({ bits, data: FixedArray::make(1 << bits, 0), })
     None => None
   }
   let huffman_info = self.read_huffman_codes(
@@ -380,7 +374,7 @@ fn LosslessDecoder::decode_image_data(
         let code = read_symbol(tree[green], self.br)
         if code < 256 {
           let n = if huffman_info.bits == 0 {
-            num_values
+            num_values - index
           } else {
             next_block_start - index
           }
@@ -398,7 +392,7 @@ fn LosslessDecoder::decode_image_data(
             data[(index + i) * 4 + 3] = av
           }
           match huffman_info.color_cache {
-            Some(cc) => color_cache_insert(cc, [rv, gv, bv, av])
+            Some(cc) => color_cache_insert(cc, data, index * 4)
             None => ()
           }
           index += n
@@ -420,8 +414,7 @@ fn LosslessDecoder::decode_image_data(
       data[index * 4 + 2] = blue_val
       data[index * 4 + 3] = alpha_val
       match huffman_info.color_cache {
-        Some(cc) =>
-          color_cache_insert(cc, [red_val, green_val, blue_val, alpha_val])
+        Some(cc) => color_cache_insert(cc, data, index * 4)
         None => ()
       }
       index += 1
@@ -454,13 +447,7 @@ fn LosslessDecoder::decode_image_data(
       match huffman_info.color_cache {
         Some(cc) =>
           for i = 0; i < length; i = i + 1 {
-            let p = (index + i) * 4
-            color_cache_insert(cc, [
-              data[p],
-              data[p + 1],
-              data[p + 2],
-              data[p + 3],
-            ])
+            color_cache_insert(cc, data, (index + i) * 4)
           }
         None => ()
       }
@@ -471,26 +458,28 @@ fn LosslessDecoder::decode_image_data(
         None => raise DecodeError("color cache code without color cache")
       }
       let cache_index = code - 280
-      let color = cc.data[cache_index]
-      data[index * 4] = color[0]
-      data[index * 4 + 1] = color[1]
-      data[index * 4 + 2] = color[2]
-      data[index * 4 + 3] = color[3]
+      let argb = cc.data[cache_index]
+      data[index * 4] = (argb >> 16).to_byte()
+      data[index * 4 + 1] = (argb >> 8).to_byte()
+      data[index * 4 + 2] = argb.to_byte()
+      data[index * 4 + 3] = (argb >> 24).to_byte()
       index += 1
     }
   }
 }
 
 ///|
-fn color_cache_insert(cc : ColorCache, color : FixedArray[Byte]) -> Unit {
-  let r = color[0].to_int()
-  let g = color[1].to_int()
-  let b = color[2].to_int()
-  let a = color[3].to_int()
-  let color_u32 = (r << 16) | (g << 8) | b | (a << 24)
-  let hash = (0x1E35A7BD * color_u32).reinterpret_as_uint() >> (32 - cc.bits)
-  let idx = hash.reinterpret_as_int()
-  cc.data[idx] = color
+fn color_cache_insert(
+  cc : ColorCache,
+  rgba : FixedArray[Byte],
+  offset : Int32,
+) -> Unit {
+  let argb = (rgba[offset + 3].to_int() << 24) |
+    (rgba[offset].to_int() << 16) |
+    (rgba[offset + 1].to_int() << 8) |
+    rgba[offset + 2].to_int()
+  let hash = (0x1E35A7BD * argb).reinterpret_as_uint() >> (32 - cc.bits)
+  cc.data[hash.reinterpret_as_int()] = argb
 }
 
 ///|
