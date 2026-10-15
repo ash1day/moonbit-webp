@@ -5,23 +5,23 @@ pub(all) suberror DecodeError {
 
 ///|
 pub(all) struct ImageData {
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
   data : Bytes
 }
 
 ///|
 priv struct ColorCache {
-  bits : Int
+  bits : Int32
   data : FixedArray[FixedArray[Byte]]
 }
 
 ///|
 priv struct HuffmanInfo {
-  xsize : Int
+  xsize : Int32
   color_cache : ColorCache?
-  image : FixedArray[Int]
-  bits : Int
-  mask : Int
+  image : FixedArray[Int32]
+  bits : Int32
+  mask : Int32
   huffman_code_groups : Array[FixedArray[@huffman.HuffmanTree]]
 }

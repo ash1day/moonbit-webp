@@ -83,8 +83,9 @@ test "predictor mode 6 - average(left, top-left)" {
   //   pred[c] = average2(left[c], tl[c])
   //   pred[0] = average2(100, 10) = 55
   //   result[0] = 5 + 55 = 60
-  let data : FixedArray[Byte] = [10, 20, 30, 40, 50, 60, 70, 80, 100, 110, 120,
-  130, 5, 6, 7, 8]
+  let data : FixedArray[Byte] = [
+    10, 20, 30, 40, 50, 60, 70, 80, 100, 110, 120, 130, 5, 6, 7, 8,
+  ]
   apply_predictor_6(data, 12, 16, 2)
   assert_eq(data[12].to_int(), 60) // 5 + average2(100,10) = 5+55
   assert_eq(data[13].to_int(), 71) // 6 + average2(110,20) = 6+65
@@ -120,9 +121,9 @@ test "color_indexing bit-packed (table <= 4)" {
   // table_size=4, bits_per_entry=2, pixels_per_byte=4
   let table : FixedArray[Byte] = [
     10, 20, 30, 255, // color 0
-    40, 50, 60, 255, // color 1
-    70, 80, 90, 255, // color 2
-    100, 110, 120, 255, // color 3
+     40, 50, 60, 255, // color 1
+     70, 80, 90, 255, // color 2
+     100, 110, 120, 255, // color 3
   ]
   // actual width=4, packed_width=ceil(4/4)=1
   // packed green byte encodes 4 indices at 2 bits each

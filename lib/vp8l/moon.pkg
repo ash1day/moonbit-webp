@@ -1,0 +1,11 @@
+import {
+  "ash1day/webp/lib/bitreader",
+  "ash1day/webp/lib/huffman",
+  "ash1day/webp/lib/transform",
+  "ash1day/webp/lib/riff",
+}
+
+import {
+  "moonbitlang/x/fs",
+  "moonbitlang/x/crypto",
+} for "wbtest"

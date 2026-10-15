@@ -4,13 +4,13 @@ fn average2(a : Byte, b : Byte) -> Byte {
 }
 
 ///|
-fn clamp_add_subtract_full(a : Int, b : Int, c : Int) -> Byte {
+fn clamp_add_subtract_full(a : Int32, b : Int32, c : Int32) -> Byte {
   let v = a + b - c
   (if v < 0 { 0 } else if v > 255 { 255 } else { v }).to_byte()
 }
 
 ///|
-fn clamp_add_subtract_half(a : Int, b : Int) -> Byte {
+fn clamp_add_subtract_half(a : Int32, b : Int32) -> Byte {
   let v = a + (a - b) / 2
   (if v < 0 { 0 } else if v > 255 { 255 } else { v }).to_byte()
 }
@@ -18,10 +18,10 @@ fn clamp_add_subtract_half(a : Int, b : Int) -> Byte {
 ///|
 pub fn apply_predictor_transform(
   image_data : FixedArray[Byte],
-  width : Int,
-  height : Int,
-  size_bits : Int,
-  predictor_data : FixedArray[Byte]
+  width : Int32,
+  height : Int32,
+  size_bits : Int32,
+  predictor_data : FixedArray[Byte],
 ) -> Unit {
   let block_xsize = subsample_size(width, size_bits)
   // Top-left pixel: add 0xFF to alpha channel
@@ -68,12 +68,13 @@ pub fn apply_predictor_transform(
 }
 
 // Mode 0: add 0xFF to alpha channel only
+
 ///|
 fn apply_predictor_0(
   data : FixedArray[Byte],
-  start : Int,
-  end : Int,
-  _width : Int
+  start : Int32,
+  end : Int32,
+  _width : Int32,
 ) -> Unit {
   let mut i = start + 3
   while i < end {
@@ -83,12 +84,13 @@ fn apply_predictor_0(
 }
 
 // Mode 1: add left pixel
+
 ///|
 fn apply_predictor_1(
   data : FixedArray[Byte],
-  start : Int,
-  end : Int,
-  _width : Int
+  start : Int32,
+  end : Int32,
+  _width : Int32,
 ) -> Unit {
   let mut i = start
   while i < end {
@@ -98,12 +100,13 @@ fn apply_predictor_1(
 }
 
 // Mode 2: add top pixel
+
 ///|
 fn apply_predictor_2(
   data : FixedArray[Byte],
-  start : Int,
-  end : Int,
-  width : Int
+  start : Int32,
+  end : Int32,
+  width : Int32,
 ) -> Unit {
   let stride = width * 4
   let mut i = start
@@ -114,12 +117,13 @@ fn apply_predictor_2(
 }
 
 // Mode 3: add top-right pixel
+
 ///|
 fn apply_predictor_3(
   data : FixedArray[Byte],
-  start : Int,
-  end : Int,
-  width : Int
+  start : Int32,
+  end : Int32,
+  width : Int32,
 ) -> Unit {
   let stride = width * 4
   let mut i = start
@@ -130,12 +134,13 @@ fn apply_predictor_3(
 }
 
 // Mode 4: add top-left pixel
+
 ///|
 fn apply_predictor_4(
   data : FixedArray[Byte],
-  start : Int,
-  end : Int,
-  width : Int
+  start : Int32,
+  end : Int32,
+  width : Int32,
 ) -> Unit {
   let stride = width * 4
   let mut i = start
@@ -146,12 +151,13 @@ fn apply_predictor_4(
 }
 
 // Mode 5: average(average(left, top-right), top)
+
 ///|
 fn apply_predictor_5(
   data : FixedArray[Byte],
-  start : Int,
-  end : Int,
-  width : Int
+  start : Int32,
+  end : Int32,
+  width : Int32,
 ) -> Unit {
   let stride = width * 4
   let prev = FixedArray::make(4, b'\x00')
@@ -174,12 +180,13 @@ fn apply_predictor_5(
 }
 
 // Mode 6: average(left, top-left)
+
 ///|
 fn apply_predictor_6(
   data : FixedArray[Byte],
-  start : Int,
-  end : Int,
-  width : Int
+  start : Int32,
+  end : Int32,
+  width : Int32,
 ) -> Unit {
   let stride = width * 4
   let mut i = start
@@ -190,12 +197,13 @@ fn apply_predictor_6(
 }
 
 // Mode 7: average(left, top)
+
 ///|
 fn apply_predictor_7(
   data : FixedArray[Byte],
-  start : Int,
-  end : Int,
-  width : Int
+  start : Int32,
+  end : Int32,
+  width : Int32,
 ) -> Unit {
   let stride = width * 4
   let prev = FixedArray::make(4, b'\x00')
@@ -217,12 +225,13 @@ fn apply_predictor_7(
 }
 
 // Mode 8: average(top-left, top)
+
 ///|
 fn apply_predictor_8(
   data : FixedArray[Byte],
-  start : Int,
-  end : Int,
-  width : Int
+  start : Int32,
+  end : Int32,
+  width : Int32,
 ) -> Unit {
   let stride = width * 4
   let mut i = start
@@ -233,12 +242,13 @@ fn apply_predictor_8(
 }
 
 // Mode 9: average(top, top-right)
+
 ///|
 fn apply_predictor_9(
   data : FixedArray[Byte],
-  start : Int,
-  end : Int,
-  width : Int
+  start : Int32,
+  end : Int32,
+  width : Int32,
 ) -> Unit {
   let stride = width * 4
   let mut i = start
@@ -249,12 +259,13 @@ fn apply_predictor_9(
 }
 
 // Mode 10: average(average(left, top-left), average(top, top-right))
+
 ///|
 fn apply_predictor_10(
   data : FixedArray[Byte],
-  start : Int,
-  end : Int,
-  width : Int
+  start : Int32,
+  end : Int32,
+  width : Int32,
 ) -> Unit {
   let stride = width * 4
   let prev = FixedArray::make(4, b'\x00')
@@ -278,12 +289,13 @@ fn apply_predictor_10(
 }
 
 // Mode 11: select(left, top) based on gradient prediction
+
 ///|
 fn apply_predictor_11(
   data : FixedArray[Byte],
-  start : Int,
-  end : Int,
-  width : Int
+  start : Int32,
+  end : Int32,
+  width : Int32,
 ) -> Unit {
   let stride = width * 4
   let l = FixedArray::make(4, 0)
@@ -309,8 +321,8 @@ fn apply_predictor_11(
       let predict = l[c] + t[c] - tl[c]
       let diff_left = predict - l[c]
       let diff_top = predict - t[c]
-      predict_left += (if diff_left < 0 { -diff_left } else { diff_left })
-      predict_top += (if diff_top < 0 { -diff_top } else { diff_top })
+      predict_left += if diff_left < 0 { -diff_left } else { diff_left }
+      predict_top += if diff_top < 0 { -diff_top } else { diff_top }
     }
     if predict_left < predict_top {
       for c = 0; c < 4; c = c + 1 {
@@ -334,12 +346,13 @@ fn apply_predictor_11(
 }
 
 // Mode 12: clamp_add_subtract_full(left, top, top-left)
+
 ///|
 fn apply_predictor_12(
   data : FixedArray[Byte],
-  start : Int,
-  end : Int,
-  width : Int
+  start : Int32,
+  end : Int32,
+  width : Int32,
 ) -> Unit {
   let stride = width * 4
   let prev = FixedArray::make(4, b'\x00')
@@ -366,12 +379,13 @@ fn apply_predictor_12(
 }
 
 // Mode 13: clamp_add_subtract_half(average(left, top), top-left)
+
 ///|
 fn apply_predictor_13(
   data : FixedArray[Byte],
-  start : Int,
-  end : Int,
-  width : Int
+  start : Int32,
+  end : Int32,
+  width : Int32,
 ) -> Unit {
   let stride = width * 4
   let prev = FixedArray::make(4, b'\x00')

@@ -24,7 +24,7 @@ test "read past end raises error" {
   assert_eq(br.read_bits(3), 2) // 010
   assert_eq(br.read_bits(5), 13) // 01101
   // no more bits, should error
-  let result = try { br.read_bits(4) } catch { _ => -1 }
+  let result = br.read_bits(4) catch { _ => -1 }
   assert_eq(result, -1)
 }
 

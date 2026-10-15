@@ -2,16 +2,16 @@
 priv struct LosslessDecoder {
   br : @bitreader.BitReader
   transforms : FixedArray[@transform.TransformType?]
-  transform_order : Array[Int]
-  width : Int
-  height : Int
+  transform_order : Array[Int32]
+  width : Int32
+  height : Int32
 }
 
 ///|
 fn LosslessDecoder::new(
   br : @bitreader.BitReader,
-  width : Int,
-  height : Int
+  width : Int32,
+  height : Int32,
 ) -> LosslessDecoder {
   {
     br,
@@ -23,52 +23,50 @@ fn LosslessDecoder::new(
 }
 
 // Helper: wrap BitReader.read_bits to DecodeError
+
 ///|
-fn read_bits(br : @bitreader.BitReader, n : Int) -> Int raise DecodeError {
-  try {
-    br.read_bits(n)
-  } catch {
+fn read_bits(br : @bitreader.BitReader, n : Int32) -> Int32 raise DecodeError {
+  br.read_bits(n) catch {
     @bitreader.BitReaderError(msg) => raise DecodeError(msg)
   }
 }
 
 // Helper: wrap BitReader.consume to DecodeError
+
 ///|
-fn consume_bits(br : @bitreader.BitReader, n : Int) -> Unit raise DecodeError {
-  try {
-    br.consume(n)
-  } catch {
+fn consume_bits(br : @bitreader.BitReader, n : Int32) -> Unit raise DecodeError {
+  br.consume(n) catch {
     @bitreader.BitReaderError(msg) => raise DecodeError(msg)
   }
 }
 
 // Helper: wrap HuffmanTree.read_symbol to DecodeError
+
 ///|
 fn read_symbol(
   tree : @huffman.HuffmanTree,
-  br : @bitreader.BitReader
-) -> Int raise DecodeError {
-  try {
-    tree.read_symbol(br)
-  } catch {
+  br : @bitreader.BitReader,
+) -> Int32 raise DecodeError {
+  tree.read_symbol(br) catch {
     @bitreader.BitReaderError(msg) => raise DecodeError(msg)
   }
 }
 
 // Helper: wrap HuffmanTree.build_implicit to DecodeError
+
 ///|
 fn build_huffman(
-  code_lengths : FixedArray[Int]
+  code_lengths : FixedArray[Int32],
 ) -> @huffman.HuffmanTree raise DecodeError {
-  try {
-    @huffman.HuffmanTree::build_implicit(code_lengths)
-  } catch {
+  @huffman.HuffmanTree::build_implicit(code_lengths) catch {
     @huffman.HuffmanError(msg) => raise DecodeError(msg)
   }
 }
 
 ///|
-fn LosslessDecoder::read_transforms(self : LosslessDecoder) -> Int raise DecodeError {
+fn LosslessDecoder::read_transforms(
+  self : LosslessDecoder,
+) -> Int32 raise DecodeError {
   let mut xsize = self.width
   while read_bits(self.br, 1) == 1 {
     let transform_type_val = read_bits(self.br, 2)
@@ -85,8 +83,13 @@ fn LosslessDecoder::read_transforms(self : LosslessDecoder) -> Int raise DecodeE
           block_xsize * block_ysize * 4,
           b'\x00',
         )
-        self.decode_image_stream(block_xsize, block_ysize, false, predictor_data)
-        @transform.TransformType::PredictorTransform(size_bits~, data=predictor_data)
+        self.decode_image_stream(
+          block_xsize, block_ysize, false, predictor_data,
+        )
+        @transform.TransformType::PredictorTransform(
+          size_bits~,
+          data=predictor_data,
+        )
       }
       1 => {
         let size_bits = read_bits(self.br, 3) + 2
@@ -96,8 +99,13 @@ fn LosslessDecoder::read_transforms(self : LosslessDecoder) -> Int raise DecodeE
           block_xsize * block_ysize * 4,
           b'\x00',
         )
-        self.decode_image_stream(block_xsize, block_ysize, false, transform_data)
-        @transform.TransformType::ColorTransform(size_bits~, data=transform_data)
+        self.decode_image_stream(
+          block_xsize, block_ysize, false, transform_data,
+        )
+        @transform.TransformType::ColorTransform(
+          size_bits~,
+          data=transform_data,
+        )
       }
       2 => @transform.TransformType::SubtractGreen
       3 => {
@@ -137,30 +145,32 @@ fn adjust_color_map(color_map : FixedArray[Byte]) -> Unit {
 ///|
 fn LosslessDecoder::decode_image_stream(
   self : LosslessDecoder,
-  xsize : Int,
-  ysize : Int,
+  xsize : Int32,
+  ysize : Int32,
   is_argb_img : Bool,
-  data : FixedArray[Byte]
+  data : FixedArray[Byte],
 ) -> Unit raise DecodeError {
   let color_cache_bits = self.read_color_cache()
   let color_cache : ColorCache? = match color_cache_bits {
     Some(bits) =>
-      Some(
-        {
-          bits,
-          data: FixedArray::makei(1 << bits, fn(_i) {
-            FixedArray::make(4, b'\x00')
-          }),
-        },
-      )
+      Some({
+        bits,
+        data: FixedArray::makei(1 << bits, fn(_i) {
+          FixedArray::make(4, b'\x00')
+        }),
+      })
     None => None
   }
-  let huffman_info = self.read_huffman_codes(is_argb_img, xsize, ysize, color_cache)
+  let huffman_info = self.read_huffman_codes(
+    is_argb_img, xsize, ysize, color_cache,
+  )
   self.decode_image_data(xsize, ysize, huffman_info, data)
 }
 
 ///|
-fn LosslessDecoder::read_color_cache(self : LosslessDecoder) -> Int? raise DecodeError {
+fn LosslessDecoder::read_color_cache(
+  self : LosslessDecoder,
+) -> Int32? raise DecodeError {
   if read_bits(self.br, 1) == 1 {
     let code_bits = read_bits(self.br, 4)
     if code_bits < 1 || code_bits > 11 {
@@ -176,23 +186,20 @@ fn LosslessDecoder::read_color_cache(self : LosslessDecoder) -> Int? raise Decod
 fn LosslessDecoder::read_huffman_codes(
   self : LosslessDecoder,
   read_meta : Bool,
-  xsize : Int,
-  ysize : Int,
-  color_cache : ColorCache?
+  xsize : Int32,
+  ysize : Int32,
+  color_cache : ColorCache?,
 ) -> HuffmanInfo raise DecodeError {
   let mut num_huff_groups = 1
   let mut huffman_bits = 0
   let mut huffman_xsize = 1
   let mut huffman_ysize = 1
-  let mut entropy_image : FixedArray[Int] = FixedArray::make(0, 0)
+  let mut entropy_image : FixedArray[Int32] = FixedArray::make(0, 0)
   if read_meta && read_bits(self.br, 1) == 1 {
     huffman_bits = read_bits(self.br, 3) + 2
     huffman_xsize = @transform.subsample_size(xsize, huffman_bits)
     huffman_ysize = @transform.subsample_size(ysize, huffman_bits)
-    let meta_data = FixedArray::make(
-      huffman_xsize * huffman_ysize * 4,
-      b'\x00',
-    )
+    let meta_data = FixedArray::make(huffman_xsize * huffman_ysize * 4, b'\x00')
     self.decode_image_stream(huffman_xsize, huffman_ysize, false, meta_data)
     entropy_image = FixedArray::make(huffman_xsize * huffman_ysize, 0)
     for i = 0; i < entropy_image.length(); i = i + 1 {
@@ -240,7 +247,7 @@ fn LosslessDecoder::read_huffman_codes(
 ///|
 fn LosslessDecoder::read_huffman_code(
   self : LosslessDecoder,
-  alphabet_size : Int
+  alphabet_size : Int32,
 ) -> @huffman.HuffmanTree raise DecodeError {
   let simple = read_bits(self.br, 1) == 1
   if simple {
@@ -269,8 +276,7 @@ fn LosslessDecoder::read_huffman_code(
       )
     }
     let new_code_lengths = self.read_huffman_code_lengths(
-      code_length_code_lengths,
-      alphabet_size,
+      code_length_code_lengths, alphabet_size,
     )
     build_huffman(new_code_lengths)
   }
@@ -279,9 +285,9 @@ fn LosslessDecoder::read_huffman_code(
 ///|
 fn LosslessDecoder::read_huffman_code_lengths(
   self : LosslessDecoder,
-  code_length_code_lengths : FixedArray[Int],
-  num_symbols : Int
-) -> FixedArray[Int] raise DecodeError {
+  code_length_code_lengths : FixedArray[Int32],
+  num_symbols : Int32,
+) -> FixedArray[Int32] raise DecodeError {
   let table = build_huffman(code_length_code_lengths)
   let mut max_symbol = if read_bits(self.br, 1) == 1 {
     let length_nbits = 2 + 2 * read_bits(self.br, 3)
@@ -339,7 +345,7 @@ fn LosslessDecoder::read_huffman_code_lengths(
 }
 
 ///|
-fn get_huff_index(info : HuffmanInfo, x : Int, y : Int) -> Int {
+fn get_huff_index(info : HuffmanInfo, x : Int32, y : Int32) -> Int32 {
   if info.bits == 0 {
     return 0
   }
@@ -350,10 +356,10 @@ fn get_huff_index(info : HuffmanInfo, x : Int, y : Int) -> Int {
 ///|
 fn LosslessDecoder::decode_image_data(
   self : LosslessDecoder,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
   huffman_info : HuffmanInfo,
-  data : FixedArray[Byte]
+  data : FixedArray[Byte],
 ) -> Unit raise DecodeError {
   let num_values = width * height
   let huff_index = get_huff_index(huffman_info, 0, 0)
@@ -367,10 +373,12 @@ fn LosslessDecoder::decode_image_data(
       let y = index / width
       let mask_end = x | huffman_info.mask
       next_block_start = (if mask_end < width - 1 {
-        mask_end
-      } else {
-        width - 1
-      }) + y * width + 1
+          mask_end
+        } else {
+          width - 1
+        }) +
+        y * width +
+        1
       let huff_index = get_huff_index(huffman_info, x, y)
       tree = huffman_info.huffman_code_groups[huff_index]
       // Fast path: if all color codes are single-node
@@ -456,10 +464,12 @@ fn LosslessDecoder::decode_image_data(
         Some(cc) =>
           for i = 0; i < length; i = i + 1 {
             let p = (index + i) * 4
-            color_cache_insert(
-              cc,
-              [data[p], data[p + 1], data[p + 2], data[p + 3]],
-            )
+            color_cache_insert(cc, [
+              data[p],
+              data[p + 1],
+              data[p + 2],
+              data[p + 3],
+            ])
           }
         None => ()
       }
@@ -487,8 +497,7 @@ fn color_cache_insert(cc : ColorCache, color : FixedArray[Byte]) -> Unit {
   let b = color[2].to_int()
   let a = color[3].to_int()
   let color_u32 = (r << 16) | (g << 8) | b | (a << 24)
-  let hash = (0x1E35A7BD * color_u32).reinterpret_as_uint() >>
-    (32 - cc.bits)
+  let hash = (0x1E35A7BD * color_u32).reinterpret_as_uint() >> (32 - cc.bits)
   let idx = hash.reinterpret_as_int()
   cc.data[idx] = color
 }
@@ -496,8 +505,8 @@ fn color_cache_insert(cc : ColorCache, color : FixedArray[Byte]) -> Unit {
 ///|
 fn get_copy_distance(
   br : @bitreader.BitReader,
-  prefix_code : Int
-) -> Int raise DecodeError {
+  prefix_code : Int32,
+) -> Int32 raise DecodeError {
   if prefix_code < 4 {
     return prefix_code + 1
   }
@@ -509,12 +518,16 @@ fn get_copy_distance(
 }
 
 ///|
-fn plane_code_to_distance(xsize : Int, plane_code : Int) -> Int {
+fn plane_code_to_distance(xsize : Int32, plane_code : Int32) -> Int32 {
   if plane_code > 120 {
     plane_code - 120
   } else {
     let (xoffset, yoffset) = distance_map[plane_code - 1]
     let d = xoffset + yoffset * xsize
-    if d < 1 { 1 } else { d }
+    if d < 1 {
+      1
+    } else {
+      d
+    }
   }
 }

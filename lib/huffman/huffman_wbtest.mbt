@@ -1,3 +1,4 @@
+///|
 test "build_single always returns same symbol" {
   let tree = HuffmanTree::build_single(42)
   let br = @bitreader.BitReader::new(b"\xFF")
@@ -6,6 +7,7 @@ test "build_single always returns same symbol" {
   assert_eq(tree.read_symbol(br), 42)
 }
 
+///|
 test "build_two returns correct symbol based on bit" {
   let tree = HuffmanTree::build_two(5, 10)
   let br = @bitreader.BitReader::new(b"\x02")
@@ -15,6 +17,7 @@ test "build_two returns correct symbol based on bit" {
   assert_eq(tree.read_symbol(br), 5)
 }
 
+///|
 test "build_implicit simple codes" {
   // code_lengths: symbol 0->1bit, symbol 1->2bits, symbol 2->3bits, symbol 3->3bits
   // Canonical codes (MSB): 0->0, 1->10, 2->110, 3->111
@@ -46,17 +49,17 @@ test "build_implicit simple codes" {
   assert_eq(tree.read_symbol(br), 1)
 }
 
+///|
 test "build_implicit rejects all-zero lengths" {
   let cl = FixedArray::make(4, 0)
   let mut errored = false
-  try {
-    HuffmanTree::build_implicit(cl) |> ignore
-  } catch {
+  try HuffmanTree::build_implicit(cl) |> ignore catch {
     HuffmanError(_) => errored = true
   }
   assert_true(errored)
 }
 
+///|
 test "is_single_node" {
   assert_true(HuffmanTree::build_single(0).is_single_node())
   assert_false(HuffmanTree::build_two(0, 1).is_single_node())

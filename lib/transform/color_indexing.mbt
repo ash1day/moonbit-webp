@@ -1,10 +1,10 @@
 ///|
 pub fn apply_color_indexing(
   image_data : FixedArray[Byte],
-  width : Int,
-  height : Int,
-  table_size : Int,
-  table_data : FixedArray[Byte]
+  width : Int32,
+  height : Int32,
+  table_size : Int32,
+  table_data : FixedArray[Byte],
 ) -> Unit {
   if table_size > 16 {
     // Simple case: each green channel value is a direct index

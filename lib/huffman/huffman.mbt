@@ -4,15 +4,19 @@ pub(all) suberror HuffmanError {
 }
 
 ///|
-let max_allowed_code_length : Int = 15
+let max_allowed_code_length : Int32 = 15
 
 ///|
-let max_table_bits : Int = 10
+let max_table_bits : Int32 = 10
 
 ///|
 priv enum HuffmanTreeInner {
-  Single(Int)
-  Tree(table_mask~ : Int, primary~ : FixedArray[Int], secondary~ : FixedArray[Int])
+  Single(Int32)
+  Tree(
+    table_mask~ : Int32,
+    primary~ : FixedArray[Int32],
+    secondary~ : FixedArray[Int32]
+  )
 }
 
 ///|
@@ -21,7 +25,7 @@ pub struct HuffmanTree {
 }
 
 ///|
-fn next_codeword(codeword : Int, table_size : Int) -> Int {
+fn next_codeword(codeword : Int32, table_size : Int32) -> Int32 {
   if codeword == table_size - 1 {
     return codeword
   }
@@ -37,21 +41,21 @@ fn next_codeword(codeword : Int, table_size : Int) -> Int {
 }
 
 ///|
-pub fn HuffmanTree::build_single(symbol : Int) -> HuffmanTree {
-  { inner: Single(symbol) }
+pub fn HuffmanTree::build_single(symbol : Int32) -> HuffmanTree {
+  { inner: Single(symbol), }
 }
 
 ///|
-pub fn HuffmanTree::build_two(zero : Int, one : Int) -> HuffmanTree {
+pub fn HuffmanTree::build_two(zero : Int32, one : Int32) -> HuffmanTree {
   let primary = FixedArray::make(2, 0)
   primary[0] = (1 << 12) | zero
   primary[1] = (1 << 12) | one
-  { inner: Tree(table_mask=0x1, primary~, secondary=FixedArray::make(0, 0)) }
+  { inner: Tree(table_mask=0x1, primary~, secondary=FixedArray::make(0, 0)), }
 }
 
 ///|
 pub fn HuffmanTree::build_implicit(
-  code_lengths : FixedArray[Int]
+  code_lengths : FixedArray[Int32],
 ) -> HuffmanTree raise HuffmanError {
   // Build histogram
   let mut num_symbols = 0
@@ -91,7 +95,7 @@ pub fn HuffmanTree::build_implicit(
     codespace_used = (codespace_used << 1) + histogram[i]
   }
   codespace_used = (codespace_used << 1) + histogram[max_length]
-  if codespace_used != (1 << max_length) {
+  if codespace_used != 1 << max_length {
     raise HuffmanError("invalid huffman codespace")
   }
   // Calculate table parameters
@@ -118,7 +122,7 @@ pub fn HuffmanTree::build_implicit(
   let mut si = histogram[0]
   // Populate primary table
   let primary_table_bits = table_bits
-  for length in 1..=primary_table_bits {
+  for length in 1..<=primary_table_bits {
     let current_table_end = 1 << length
     for _j in 0..<histogram[length] {
       let symbol = sorted_symbols[si]
@@ -143,7 +147,7 @@ pub fn HuffmanTree::build_implicit(
     let mut subtable_start = 0
     let mut subtable_prefix = -1
     let mut secondary_len = 0
-    for length in (primary_table_bits + 1)..=max_length {
+    for length in (primary_table_bits + 1)..<=max_length {
       let subtable_size = 1 << (length - primary_table_bits)
       for _j in 0..<histogram[length] {
         if (codeword & table_mask) != subtable_prefix {
@@ -166,8 +170,10 @@ pub fn HuffmanTree::build_implicit(
         }
         let symbol = sorted_symbols[si]
         si += 1
-        secondary[subtable_start + (codeword >> primary_table_bits)] = (symbol <<
-          4) | length
+        secondary[subtable_start + (codeword >> primary_table_bits)] = (
+            symbol << 4
+          ) |
+          length
         codeword = next_codeword(codeword, 1 << length)
       }
       // Extend subtable if next length shares same prefix
@@ -201,14 +207,14 @@ pub fn HuffmanTree::build_implicit(
       secondary = trimmed
     }
   }
-  { inner: Tree(table_mask~, primary~, secondary~) }
+  { inner: Tree(table_mask~, primary~, secondary~), }
 }
 
 ///|
 pub fn HuffmanTree::read_symbol(
   self : HuffmanTree,
-  br : @bitreader.BitReader
-) -> Int raise @bitreader.BitReaderError {
+  br : @bitreader.BitReader,
+) -> Int32 raise @bitreader.BitReaderError {
   match self.inner {
     Single(symbol) => symbol
     Tree(table_mask~, primary~, secondary~) => {
@@ -240,8 +246,8 @@ pub fn HuffmanTree::is_single_node(self : HuffmanTree) -> Bool {
 ///|
 pub fn HuffmanTree::peek_symbol(
   self : HuffmanTree,
-  br : @bitreader.BitReader
-) -> (Int, Int)? {
+  br : @bitreader.BitReader,
+) -> (Int32, Int32)? {
   match self.inner {
     Single(symbol) => Some((0, symbol))
     Tree(table_mask~, primary~, ..) => {

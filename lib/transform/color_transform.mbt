@@ -1,11 +1,15 @@
 ///|
-fn to_signed_byte(v : Int) -> Int {
+fn to_signed_byte(v : Int32) -> Int32 {
   let b = v & 0xFF
-  if b >= 128 { b - 256 } else { b }
+  if b >= 128 {
+    b - 256
+  } else {
+    b
+  }
 }
 
 ///|
-fn color_transform_delta(t : Int, c : Int) -> Int {
+fn color_transform_delta(t : Int32, c : Int32) -> Int32 {
   // Rust: (i32::from(t) * i32::from(c)) as u32 >> 5
   // t and c are sign-extended i8 values (-128..127)
   // Multiply as signed, cast to unsigned, then logical shift right by 5
@@ -16,9 +20,9 @@ fn color_transform_delta(t : Int, c : Int) -> Int {
 ///|
 pub fn apply_color_transform(
   image_data : FixedArray[Byte],
-  width : Int,
-  size_bits : Int,
-  transform_data : FixedArray[Byte]
+  width : Int32,
+  size_bits : Int32,
+  transform_data : FixedArray[Byte],
 ) -> Unit {
   let block_xsize = subsample_size(width, size_bits)
   let height = image_data.length() / (width * 4)

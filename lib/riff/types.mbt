@@ -10,17 +10,17 @@ pub(all) enum ChunkType {
   EXIF // EXIF metadata
   XMP // XMP metadata
   Unknown(Bytes) // 4-byte FourCC
-} derive(Show, Eq)
+} derive(Show, Eq, Debug)
 
 ///|
 pub(all) struct Chunk {
   chunk_type : ChunkType
-  offset : Int // byte offset of chunk data (after type + size)
-  size : Int // chunk data size
+  offset : Int32 // byte offset of chunk data (after type + size)
+  size : Int32 // chunk data size
 } derive(Show, Eq)
 
 ///|
 pub(all) struct WebPFile {
-  file_size : Int // RIFF file size
+  file_size : Int32 // RIFF file size
   chunks : Array[Chunk]
 } derive(Show, Eq)
