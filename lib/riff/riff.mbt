@@ -65,15 +65,17 @@ pub fn parse(data : Bytes) -> WebPFile? {
   while pos + 8 <= end {
     let chunk_type = read_chunk_type(data, pos)
     let chunk_size = read_u32_le(data, pos + 4)
+    if chunk_size < 0 {
+      return None
+    }
     let data_offset = pos + 8
     chunks.push({ chunk_type, offset: data_offset, size: chunk_size, })
-    // RIFF chunks are padded to even size
-    let padded_size = if chunk_size % 2 == 0 {
-      chunk_size
-    } else {
-      chunk_size + 1
+    // A truncated last chunk is kept; its size is checked by the reader
+    if chunk_size >= end - data_offset {
+      break
     }
-    pos = data_offset + padded_size
+    // RIFF chunks are padded to even size
+    pos = data_offset + chunk_size + chunk_size % 2
   }
   Some({ file_size, chunks, })
 }

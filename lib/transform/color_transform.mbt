@@ -21,11 +21,11 @@ fn color_transform_delta(t : Int32, c : Int32) -> Int32 {
 pub fn apply_color_transform(
   image_data : FixedArray[Byte],
   width : Int32,
+  height : Int32,
   size_bits : Int32,
   transform_data : FixedArray[Byte],
 ) -> Unit {
   let block_xsize = subsample_size(width, size_bits)
-  let height = image_data.length() / (width * 4)
   let mut y = 0
   while y < height {
     let row_start = y * width * 4

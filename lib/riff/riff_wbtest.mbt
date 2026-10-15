@@ -90,3 +90,28 @@ test "parse rejects non-WEBP RIFF" {
   ]
   assert_true(parse(data) is None)
 }
+
+///|
+test "parse rejects negative chunk size" {
+  let data : Bytes = [
+    0x52, 0x49, 0x46, 0x46, // RIFF
+     0x10, 0x00, 0x00, 0x00, // file size = 16
+     0x57, 0x45, 0x42, 0x50, // WEBP
+     0x56, 0x50, 0x38, 0x4c, // "VP8L"
+     0xf8, 0xff, 0xff, 0xff, // chunk size = 0xFFFFFFF8
+  ]
+  assert_true(parse(data) is None)
+}
+
+///|
+test "parse stops at a chunk of size Int32 max" {
+  let data : Bytes = [
+    0x52, 0x49, 0x46, 0x46, // RIFF
+     0x10, 0x00, 0x00, 0x00, // file size = 16
+     0x57, 0x45, 0x42, 0x50, // WEBP
+     0x56, 0x50, 0x38, 0x4c, // "VP8L"
+     0xff, 0xff, 0xff, 0x7f, // chunk size = 0x7FFFFFFF (padding overflows)
+  ]
+  let file = parse(data).unwrap()
+  assert_eq(file.chunks.length(), 1)
+}

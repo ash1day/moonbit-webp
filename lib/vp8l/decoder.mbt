@@ -31,15 +31,6 @@ fn read_bits(br : @bitreader.BitReader, n : Int32) -> Int32 raise DecodeError {
   }
 }
 
-// Helper: wrap BitReader.consume to DecodeError
-
-///|
-fn consume_bits(br : @bitreader.BitReader, n : Int32) -> Unit raise DecodeError {
-  br.consume(n) catch {
-    @bitreader.BitReaderError(msg) => raise DecodeError(msg)
-  }
-}
-
 // Helper: wrap HuffmanTree.read_symbol to DecodeError
 
 ///|
@@ -512,9 +503,7 @@ fn get_copy_distance(
   }
   let extra_bits = (prefix_code - 2) >> 1
   let offset = (2 + (prefix_code & 1)) << extra_bits
-  let bits = br.peek(extra_bits)
-  consume_bits(br, extra_bits)
-  offset + bits + 1
+  offset + read_bits(br, extra_bits) + 1
 }
 
 ///|

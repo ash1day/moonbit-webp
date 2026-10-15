@@ -73,3 +73,45 @@ test "decode 5_webp_ll.webp" {
     "8cc6797dc48c89ddc037ce6a51ebe2f8",
   )
 }
+
+///|
+test "chunk larger than the file raises DecodeError" {
+  let data : Bytes = [
+    0x52, 0x49, 0x46, 0x46, // RIFF
+     0x11, 0x00, 0x00, 0x00, // file size = 17
+     0x57, 0x45, 0x42, 0x50, // WEBP
+     0x56, 0x50, 0x38, 0x4c, // "VP8L"
+     0xe8, 0x03, 0x00, 0x00, // chunk size = 1000
+     0x2f, // only the signature is present
+  ]
+  try decode_vp8l(data) |> ignore catch {
+    DecodeError(_) => ()
+  } noraise {
+    _ => fail("expected DecodeError")
+  }
+}
+
+///|
+test "chunk size near Int32 max raises DecodeError" {
+  let data : Bytes = [
+    0x52, 0x49, 0x46, 0x46, // RIFF
+     0x11, 0x00, 0x00, 0x00, // file size = 17
+     0x57, 0x45, 0x42, 0x50, // WEBP
+     0x56, 0x50, 0x38, 0x4c, // "VP8L"
+     0xf0, 0xff, 0xff, 0x7f, // chunk size = 0x7FFFFFF0
+     0x2f,
+  ]
+  try decode_vp8l(data) |> ignore catch {
+    DecodeError(_) => ()
+  } noraise {
+    _ => fail("expected DecodeError")
+  }
+}
+
+///|
+test "get_copy_distance refills the bit buffer" {
+  // prefix code 10 -> extra_bits = 4, offset = 2 << 4 = 32
+  // the reader has not buffered anything yet but the bits are in the data
+  let br = @bitreader.BitReader::new(b"\x05")
+  assert_eq(get_copy_distance(br, 10), 32 + 5 + 1)
+}

@@ -16,6 +16,9 @@ pub fn decode_vp8l(webp_data : Bytes) -> ImageData raise DecodeError {
     Some(c) => c
     None => raise DecodeError("no VP8L chunk found")
   }
+  if chunk.size > webp_data.length() - chunk.offset {
+    raise DecodeError("VP8L chunk exceeds file size")
+  }
   let chunk_data = Bytes::makei(chunk.size, fn(i) {
     webp_data[chunk.offset + i]
   })
@@ -56,7 +59,9 @@ pub fn decode_vp8l(webp_data : Bytes) -> ImageData raise DecodeError {
           buf, current_width, height, size_bits, data,
         )
       Some(ColorTransform(size_bits~, data~)) =>
-        @transform.apply_color_transform(buf, current_width, size_bits, data)
+        @transform.apply_color_transform(
+          buf, current_width, height, size_bits, data,
+        )
       Some(SubtractGreen) =>
         apply_subtract_green_bounded(buf, current_width * height)
       Some(ColorIndexingTransform(table_size~, data~)) => {

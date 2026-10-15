@@ -176,3 +176,35 @@ test "to_signed_byte" {
   assert_eq(to_signed_byte(255), -1)
   assert_eq(to_signed_byte(256), 0) // wraps via & 0xFF
 }
+
+///|
+test "color_transform only touches the given rows" {
+  // 1x1 image in a buffer that has room for 2 rows, as after color indexing
+  // packs the width. green_to_red = 1, green = 32 -> red += 1
+  let data : FixedArray[Byte] = [0, 32, 0, 0, 0, 32, 0, 0]
+  let transform : FixedArray[Byte] = [0, 0, 1, 0]
+  apply_color_transform(data, 1, 1, 2, transform)
+  assert_eq(data[0].to_int(), 1)
+  assert_eq(data[4].to_int(), 0) // second row is outside the image
+}
+
+///|
+test "predictor modes 14 and 15 behave as mode 0 like libwebp" {
+  for mode in [14, 15] {
+    // 2x2 image of zero residuals; only pixel (1, 1) uses the block's mode
+    let data = FixedArray::make(16, b'\x00')
+    let predictor : FixedArray[Byte] = [0, mode.to_byte(), 0, 0]
+    apply_predictor_transform(data, 2, 2, 2, predictor)
+    assert_eq(data[15].to_int(), 255)
+  }
+}
+
+///|
+test "predictor mode uses only the low 4 bits like libwebp" {
+  // mode 17 & 0xF = 1 (left pixel); red of pixel (0, 0) is 10
+  let data = FixedArray::make(16, b'\x00')
+  data[0] = b'\x0A'
+  let predictor : FixedArray[Byte] = [0, 17, 0, 0]
+  apply_predictor_transform(data, 2, 2, 2, predictor)
+  assert_eq(data[12].to_int(), 10)
+}

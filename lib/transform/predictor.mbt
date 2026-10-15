@@ -39,7 +39,8 @@ pub fn apply_predictor_transform(
   for y = 1; y < height; y = y + 1 {
     for block_x = 0; block_x < block_xsize; block_x = block_x + 1 {
       let block_index = (y >> size_bits) * block_xsize + block_x
-      let predictor = predictor_data[block_index * 4 + 1].to_int() // green channel holds mode
+      // green channel holds mode; libwebp uses only the low 4 bits
+      let predictor = predictor_data[block_index * 4 + 1].to_int() & 0xF
       let shifted = block_x << size_bits
       let start_x = if shifted < 1 { 1 } else { shifted }
       let end_shifted = (block_x + 1) << size_bits
@@ -47,7 +48,7 @@ pub fn apply_predictor_transform(
       let start = (y * width + start_x) * 4
       let end = (y * width + end_x) * 4
       match predictor {
-        0 => apply_predictor_0(image_data, start, end, width)
+        0 | 14 | 15 => apply_predictor_0(image_data, start, end, width)
         1 => apply_predictor_1(image_data, start, end, width)
         2 => apply_predictor_2(image_data, start, end, width)
         3 => apply_predictor_3(image_data, start, end, width)
@@ -60,8 +61,7 @@ pub fn apply_predictor_transform(
         10 => apply_predictor_10(image_data, start, end, width)
         11 => apply_predictor_11(image_data, start, end, width)
         12 => apply_predictor_12(image_data, start, end, width)
-        13 => apply_predictor_13(image_data, start, end, width)
-        _ => ()
+        _ => apply_predictor_13(image_data, start, end, width) // 13
       }
     }
   }
