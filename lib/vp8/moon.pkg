@@ -1,0 +1,9 @@
+import {
+  "ash1day/webp/lib/riff",
+  "ash1day/webp/lib/vp8l",
+}
+
+import {
+  "moonbitlang/x/fs",
+  "moonbitlang/x/crypto",
+} for "wbtest"
