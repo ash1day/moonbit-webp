@@ -109,6 +109,53 @@ test "chunk size near Int32 max raises DecodeError" {
 }
 
 ///|
+/// Expected values are the MD5 of the RGBA pixels written by `dwebp -pam`.
+let lossless_vectors : Array[(String, Int32, Int32, String)] = [
+  (
+    "lossless-extra/bad_palette_index", 128, 128, "2dba96252d2b011d4a351c091e1739a5",
+  ),
+  (
+    "lossless-extra/color_cache_bits_11", 128, 128, "50c39d15a3ec7f4bec1fe39d3e720cb2",
+  ),
+  ("lossless-extra/dual_transform", 100, 30, "a1c5d391fe310f8ac12110220972dcea"),
+  ("lossless-extra/lossless1", 1000, 307, "8cad0211e20ad0f8c3049a03ab535888"),
+  ("lossless-extra/lossless2", 1000, 307, "8cad0211e20ad0f8c3049a03ab535888"),
+  ("lossless-extra/lossless3", 1000, 307, "8cad0211e20ad0f8c3049a03ab535888"),
+  ("lossless-extra/lossless4", 256, 256, "0f1bc3398c60b7c7f39145e0750e2dc9"),
+  (
+    "lossless-extra/lossless_big_random_alpha", 2048, 2048, "42209ef35823688fbf8f135ff5f35607",
+  ),
+  (
+    "lossless-extra/lossless_color_transform", 512, 512, "365b2322718137d55809146cbb1d984e",
+  ),
+  (
+    "lossless-extra/one_color_no_palette", 100, 100, "4e0a293a5b638f0aba2c4fe2c3418d0e",
+  ),
+  ("regression/color_index", 30, 30, "645662fafb288f8dbaad2169fc7622ae"),
+  (
+    "regression/lossless_indexed_1bit_palette", 230, 128, "ca3599a883c01bb1263d115013d47ebd",
+  ),
+  (
+    "regression/lossless_indexed_2bit_palette", 230, 128, "35b3b636d4ee63275e743a717c64f245",
+  ),
+  (
+    "regression/lossless_indexed_4bit_palette", 500, 300, "67ae30effa2203d75575b2d571a27167",
+  ),
+  ("regression/tiny", 10, 7, "43f244c388586865f7913da7eaedabd3"),
+]
+
+///|
+test "decode libwebp and regression lossless vectors" {
+  for vector in lossless_vectors {
+    let (name, width, height, md5) = vector
+    let webp_data = @fs.read_file_to_bytes("testdata/\{name}.webp")
+    let result = decode_vp8l(webp_data)
+    assert_eq((name, result.width, result.height), (name, width, height))
+    assert_eq((name, bytes_to_hex(@crypto.md5(result.data))), (name, md5))
+  }
+}
+
+///|
 test "get_copy_distance refills the bit buffer" {
   // prefix code 10 -> extra_bits = 4, offset = 2 << 4 = 32
   // the reader has not buffered anything yet but the bits are in the data

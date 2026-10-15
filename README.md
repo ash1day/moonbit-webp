@@ -37,7 +37,9 @@ moon test
 ```
 
 The decoder is checked against the MD5 of the RGBA output of `dwebp` for the
-lossless images in `testdata/lossless`. Test images come from
+lossless images in `testdata/lossless`, `testdata/lossless-extra` and
+`testdata/regression`. Malformed input raises `DecodeError` instead of
+crashing. Test images come from
 [image-rs/image-webp](https://github.com/image-rs/image-webp) and
 [libwebp-test-data](https://github.com/webmproject/libwebp-test-data); see
 [testdata/CREDITS.md](testdata/CREDITS.md).
