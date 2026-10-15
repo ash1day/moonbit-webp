@@ -6,7 +6,8 @@
 
 - **出力型**: `ImageData { width: Int, height: Int, data: Bytes }` (RGBA8, 4bytes/pixel)
 - **エラー型**: `pub(all) suberror DecodeError { DecodeError(String) }`
-- **公開API**: `pub fn decode_vp8l(webp_data : Bytes) -> ImageData raise DecodeError` (lossless のみ)
+- **公開API**: `pub fn decode_vp8l(webp_data : Bytes) -> ImageData raise DecodeError` (lossless)、`pub fn decode_vp8(webp_data : Bytes) -> ImageData raise DecodeError` (lossy)。トップレベルの `decode` に統合予定
+- **lossy の正解**: libwebp (`dwebp -pam`) と bit-exact。部品は `refs/libwebp` の C 関数を切り出して実行した値と照合する
 - **ピクセルレイアウト**: RGBA順 (R=offset 0, G=1, B=2, A=3)
 - **standalone構成**: `lib/` 配下にサブパッケージ
 
@@ -25,4 +26,5 @@ lib/
   huffman/       # Canonical Huffmanツリー
   transform/     # VP8L逆変換
   vp8l/          # VP8Lデコーダ本体
+  vp8/           # VP8 (lossy) デコーダ。libwebp と bit-exact
 ```

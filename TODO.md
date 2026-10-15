@@ -20,9 +20,16 @@
 
 ## lossy 対応
 
-- [ ] VP8 (lossy) デコーダ: ブール符号デコーダ、フレームヘッダー、イントラ予測、逆 DCT/WHT、ループフィルター、YUV → RGBA
+- [x] VP8 (lossy) デコーダ（`lib/vp8`、libwebp と bit-exact）
+  - ブール符号デコーダ、ヘッダー、モードと係数、逆 DCT/WHT、イントラ予測、ループフィルター、fancy upsampling
+  - 部品ごとに libwebp の C 関数を切り出したオラクルと照合
+  - lossy-extra 10 枚（bryce を含む）、lossy/ 5 枚、regression/dark を dwebp と照合
+  - 簡易ファジング: 3 ファイルの切り詰めと 1 バイト書き換え（約 2,700 通り）で panic なし
+- [ ] `lib/vp8` が `ImageData` / `DecodeError` を `lib/vp8l` から借りている。トップレベルの `decode` を作るときに共通の場所へ移す
+- [ ] テスト画像に無いヘッダー値: `ref_lf_delta` / `mode_lf_delta` が 0 以外、segment の `absolute_delta = 0`（libwebp のエンコーダは出力しない）。sharpness 3 と 6 は cwebp で作った画像で dwebp と一致を確認済み（リポジトリには未追加）
+- [ ] bryce（11158x2156）のデコードに 5 秒、約 380 MB かかる。平面を `Int` ではなく `Byte` で持つ、変換を省くなどで減らせる
 - [ ] ALPH チャンク（圧縮なし / VP8L 圧縮、フィルター）
 - [ ] VP8X コンテナ（キャンバスサイズ、フラグ）
 - [ ] 公開 API を `decode(webp_data) -> ImageData` にまとめる
-- [ ] testdata/lossy, lossy-extra, alpha, alpha-extra を dwebp の出力と照合する
+- [ ] testdata/alpha, alpha-extra を dwebp の出力と照合する
 - [ ] mooncakes.io への publish を検討（CLAUDE.md の方針も更新）

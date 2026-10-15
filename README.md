@@ -1,9 +1,9 @@
 # moonbit-webp
 
-A WebP lossless (VP8L) decoder written in pure MoonBit.
+A WebP decoder written in pure MoonBit. Lossless (VP8L) and lossy (VP8)
+images decode to the same pixels as libwebp's `dwebp`.
 
-This repository is a showcase. It is not published to mooncakes.io and is not
-actively developed.
+It is not published to mooncakes.io yet.
 
 ## What works
 
@@ -11,11 +11,15 @@ actively developed.
 - VP8L lossless decoding to RGBA8 (`lib/vp8l`), including canonical Huffman
   codes, the color cache, LZ77 backward references and all four inverse
   transforms (predictor, color, subtract-green, color indexing)
+- VP8 lossy decoding to RGBA8 (`lib/vp8`), bit-exact with libwebp: boolean
+  decoder, intra prediction, inverse DCT/WHT, simple and normal loop filters,
+  and the fancy chroma upsampling that `dwebp` uses by default
 
-Lossy (VP8) images, the ALPH chunk and animation are not implemented.
+The ALPH chunk (lossy images with alpha) and animation are not implemented.
 
 ```moonbit
 let image = @vp8l.decode_vp8l(webp_bytes) // ImageData { width, height, data }
+let image = @vp8.decode_vp8(webp_bytes) // lossy
 ```
 
 `data` holds `width * height * 4` bytes in RGBA order.
@@ -29,6 +33,7 @@ let image = @vp8l.decode_vp8l(webp_bytes) // ImageData { width, height, data }
 | `lib/huffman` | Canonical Huffman trees |
 | `lib/transform` | VP8L inverse transforms |
 | `lib/vp8l` | VP8L decoder |
+| `lib/vp8` | VP8 decoder |
 
 ## Tests
 
@@ -36,9 +41,11 @@ let image = @vp8l.decode_vp8l(webp_bytes) // ImageData { width, height, data }
 moon test
 ```
 
-The decoder is checked against the MD5 of the RGBA output of `dwebp` for the
-lossless images in `testdata/lossless`, `testdata/lossless-extra` and
-`testdata/regression`. Malformed input raises `DecodeError` instead of
+The decoders are checked against the MD5 of the RGBA output of `dwebp` for the
+images in `testdata/lossless`, `testdata/lossless-extra`, `testdata/lossy`,
+`testdata/lossy-extra` and `testdata/regression`. The VP8 building blocks
+(transforms, predictors, loop filters, upsampling) are also checked against
+values produced by libwebp's C functions. Malformed input raises `DecodeError` instead of
 crashing. Test images come from
 [image-rs/image-webp](https://github.com/image-rs/image-webp) and
 [libwebp-test-data](https://github.com/webmproject/libwebp-test-data); see
