@@ -1,0 +1,8 @@
+import {
+  "ash1day/webp",
+  "moonbitlang/x/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/x/crypto",
+}
+
+pkgtype(kind: "executable")
