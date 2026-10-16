@@ -9,7 +9,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install MoonBit
         # Pinned so that a new formatter or interface printer does not turn
         # the fmt and mbti checks red on its own
