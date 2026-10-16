@@ -19,7 +19,8 @@ pub fn decode_vp8l(webp_data : Bytes) -> ImageData raise DecodeError {
   if chunk.size > webp_data.length() - chunk.offset {
     raise Invalid("VP8L chunk exceeds file size")
   }
-  let chunk_data = Bytes::makei(chunk.size, fn(i) {
+  // Like libwebp, the bitstream runs to the end of the input, not of the chunk
+  let chunk_data = Bytes::makei(webp_data.length() - chunk.offset, fn(i) {
     webp_data[chunk.offset + i]
   })
   let br = @bitreader.BitReader::new(chunk_data)

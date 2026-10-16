@@ -70,6 +70,10 @@ pub fn parse(data : Bytes) -> WebPFile? {
     }
     let data_offset = pos + 8
     chunks.push({ chunk_type, offset: data_offset, size: chunk_size, })
+    // libwebp reads nothing after the image data of a still image
+    if chunk_type is (VP8 | VP8L) {
+      break
+    }
     // A truncated last chunk is kept; its size is checked by the reader
     if chunk_size >= end - data_offset {
       break

@@ -408,3 +408,31 @@ test "a RIFF size larger than the file is rejected" {
     "file is shorter than the RIFF size",
   )
 }
+
+///|
+/// Returns the file with the size of its first chunk lowered by `delta`
+fn shrink_first_chunk(path : String, delta : Int32) -> Bytes raise {
+  let data = @fs.read_file_to_bytes("testdata/\{path}.webp")
+  let size = (data[16].to_int() | (data[17].to_int() << 8)) - delta
+  Bytes::makei(data.length(), fn(i) {
+    match i {
+      16 => size.to_byte()
+      17 => (size >> 8).to_byte()
+      _ => data[i]
+    }
+  })
+}
+
+///|
+test "image bitstreams run to the end of the file like in libwebp" {
+  // libwebp reads VP8 and VP8L data up to the end of the input, so a chunk
+  // size smaller than the data does not change the image (checked with dwebp)
+  for delta in [1, 2, 16] {
+    let lossless = decode(
+      shrink_first_chunk("lossless-extra/dual_transform", delta),
+    )
+    assert_eq(md5_hex(lossless.data), "a1c5d391fe310f8ac12110220972dcea")
+    let lossy = decode(shrink_first_chunk("lossy-extra/small_31x13", delta))
+    assert_eq(md5_hex(lossy.data), "cba741e37793437baee0be7d2497b183")
+  }
+}

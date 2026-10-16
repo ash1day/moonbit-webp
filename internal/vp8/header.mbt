@@ -39,7 +39,11 @@ fn find_vp8_chunk(webp_data : Bytes) -> Bytes raise @image.DecodeError {
       if chunk.size > webp_data.length() - chunk.offset {
         raise @image.Invalid("VP8 chunk exceeds file size")
       }
-      return Bytes::makei(chunk.size, fn(i) { webp_data[chunk.offset + i] })
+      // Like libwebp, the bitstream runs to the end of the input, not of the
+      // chunk
+      return Bytes::makei(webp_data.length() - chunk.offset, fn(i) {
+        webp_data[chunk.offset + i]
+      })
     }
   }
   raise @image.Invalid("no VP8 chunk found")

@@ -122,3 +122,21 @@ test "fourcc names chunk types" {
   assert_eq(ChunkType::ALPH.fourcc(), "ALPH")
   assert_eq(ChunkType::Unknown(b"abcd").fourcc(), "abcd")
 }
+
+///|
+test "parse stops after the image chunk like libwebp" {
+  // the bytes after the VP8 chunk would read as a chunk of negative size
+  let data : Bytes = [
+    0x52, 0x49, 0x46, 0x46, // RIFF
+     0x1c, 0x00, 0x00, 0x00, // file size = 28
+     0x57, 0x45, 0x42, 0x50, // WEBP
+     0x56, 0x50, 0x38, 0x20, // "VP8 "
+     0x04, 0x00, 0x00, 0x00, // chunk size = 4
+     0x00, 0x00, 0x00, 0x00, // VP8 data
+     0x58, 0x4d, 0x50, 0x20, // "XMP "
+     0xf8, 0xff, 0xff, 0xff, // chunk size = 0xFFFFFFF8
+  ]
+  let file = parse(data).unwrap()
+  assert_eq(file.chunks.length(), 1)
+  assert_eq(file.chunks[0].chunk_type, ChunkType::VP8)
+}
