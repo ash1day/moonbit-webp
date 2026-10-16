@@ -10,9 +10,8 @@ fn to_signed_byte(v : Int32) -> Int32 {
 
 ///|
 fn color_transform_delta(t : Int32, c : Int32) -> Int32 {
-  // Rust: (i32::from(t) * i32::from(c)) as u32 >> 5
-  // t and c are sign-extended i8 values (-128..127)
-  // Multiply as signed, cast to unsigned, then logical shift right by 5
+  // t and c are sign-extended 8-bit values (-128..127). The product is
+  // shifted right by 5 as an unsigned value; only its low 8 bits are used.
   let product = t * c
   (product.reinterpret_as_uint() >> 5).reinterpret_as_int()
 }
