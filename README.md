@@ -44,8 +44,8 @@ several gigabytes. Set `max_pixels` when the input comes from outside:
 let image = @webp.decode(webp_bytes, max_pixels=4096 * 4096)
 ```
 
-Decoding a lossy image currently needs about 15 bytes of memory per pixel
-(for example 350 MB for a 24-megapixel image); lossless images need less.
+Decoding a lossy image needs about 6 bytes of memory per pixel, including the
+4-byte RGBA output (146 MB peak for a 24-megapixel image on native).
 
 ## What is supported
 

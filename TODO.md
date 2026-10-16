@@ -27,7 +27,7 @@
   - 簡易ファジング: 3 ファイルの切り詰めと 1 バイト書き換え（約 2,700 通り）で panic なし
 - [x] `ImageData` / `DecodeError` を `lib/image` に移す（`lib/vp8l` とルートは `pub using` で再公開）
 - [ ] テスト画像に無いヘッダー値: `ref_lf_delta` / `mode_lf_delta` が 0 以外、segment の `absolute_delta = 0`（libwebp のエンコーダは出力しない）。sharpness 3 と 6 は cwebp で作った画像で dwebp と一致を確認済み（リポジトリには未追加）
-- [ ] lossy のデコードに約 15 バイト/画素かかる（bryce 11158x2156 で最大 350 MB、native 0.86 秒）。Y/U/V 平面を `Int` ではなく `Byte` で持つ、RGBA を `FixedArray` から `Bytes` にコピーしない、alpha をその場で書き込む、で減らせる
+- [x] lossy のデコードが約 15 バイト/画素かかっていた（bryce で 350 MB）。Y/U/V 平面を `Byte` にし、RGBA を `Bytes` にコピーせず、alpha をその場で書き込んで約 6 バイト/画素（146 MB）にした
 - [x] ALPH チャンク（圧縮なし / VP8L 圧縮、フィルター 0〜3）
 - [x] VP8X コンテナ（チャンクサイズ、アニメーションの拒否、キャンバスと画像のサイズの一致）
 - [x] 公開 API をルートパッケージの `decode(webp_data) -> ImageData` にまとめる
