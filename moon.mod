@@ -14,4 +14,4 @@ license = "Apache-2.0"
 
 keywords = [ "webp", "image", "codec", "decoder" ]
 
-description = "WebP lossless (VP8L) decoder in pure MoonBit"
+description = "WebP decoder (lossless, lossy and alpha) in pure MoonBit"

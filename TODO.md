@@ -25,11 +25,16 @@
   - 部品ごとに libwebp の C 関数を切り出したオラクルと照合
   - lossy-extra 10 枚（bryce を含む）、lossy/ 5 枚、regression/dark を dwebp と照合
   - 簡易ファジング: 3 ファイルの切り詰めと 1 バイト書き換え（約 2,700 通り）で panic なし
-- [ ] `lib/vp8` が `ImageData` / `DecodeError` を `lib/vp8l` から借りている。トップレベルの `decode` を作るときに共通の場所へ移す
+- [x] `ImageData` / `DecodeError` を `lib/image` に移す（`lib/vp8l` とルートは `pub using` で再公開）
 - [ ] テスト画像に無いヘッダー値: `ref_lf_delta` / `mode_lf_delta` が 0 以外、segment の `absolute_delta = 0`（libwebp のエンコーダは出力しない）。sharpness 3 と 6 は cwebp で作った画像で dwebp と一致を確認済み（リポジトリには未追加）
 - [ ] bryce（11158x2156）のデコードに 5 秒、約 380 MB かかる。平面を `Int` ではなく `Byte` で持つ、変換を省くなどで減らせる
-- [ ] ALPH チャンク（圧縮なし / VP8L 圧縮、フィルター）
-- [ ] VP8X コンテナ（キャンバスサイズ、フラグ）
-- [ ] 公開 API を `decode(webp_data) -> ImageData` にまとめる
-- [ ] testdata/alpha, alpha-extra を dwebp の出力と照合する
+- [x] ALPH チャンク（圧縮なし / VP8L 圧縮、フィルター 0〜3）
+- [x] VP8X コンテナ（チャンクサイズ、アニメーションの拒否、キャンバスと画像のサイズの一致）
+- [x] 公開 API をルートパッケージの `decode(webp_data) -> ImageData` にまとめる
+- [x] testdata/alpha, alpha-extra を dwebp の出力と照合する
+  - 簡易ファジング: alpha 5 ファイルの切り詰めと 1 バイト書き換え（約 36,000 通り）で panic なし
+- [ ] ALPH チャンクは位置を問わず最初の 1 つを使う。libwebp は VP8X があるときだけ、VP8 より前の最後の ALPH を使う（VP8X なしの RIFF + ALPH + VP8 はエラー、VP8 より後の ALPH は無視）
+- [ ] VP8X のキャンバスサイズはデコードした後に照合している。libwebp のようにフレームヘッダーだけ読んで先に照合すれば、不正なファイルで無駄にデコードしない
+- [ ] `decode` は RIFF を何度も解析し、チャンクを毎回コピーしている
+- [ ] アニメーション（ANIM / ANMF）
 - [ ] mooncakes.io への publish を検討（CLAUDE.md の方針も更新）
