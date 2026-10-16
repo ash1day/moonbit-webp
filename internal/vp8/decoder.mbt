@@ -106,9 +106,9 @@ priv struct Decoder {
   // decoded planes
   y_stride : Int32
   uv_stride : Int32
-  y_plane : FixedArray[Int32]
-  u_plane : FixedArray[Int32]
-  v_plane : FixedArray[Int32]
+  y_plane : FixedArray[Byte]
+  u_plane : FixedArray[Byte]
+  v_plane : FixedArray[Byte]
   // per macroblock: filter limit (0 = none), ilevel, hev threshold, inner
   f_limit : FixedArray[Int32]
   f_ilevel : FixedArray[Int32]
@@ -231,9 +231,9 @@ fn Decoder::new(hdr : FrameHeader, br : BoolDecoder) -> Decoder {
     yuv_b: FixedArray::make(yuv_size, 0),
     y_stride,
     uv_stride,
-    y_plane: FixedArray::make(y_stride * mb_h * 16, 0),
-    u_plane: FixedArray::make(uv_stride * mb_h * 8, 0),
-    v_plane: FixedArray::make(uv_stride * mb_h * 8, 0),
+    y_plane: FixedArray::make(y_stride * mb_h * 16, b'\x00'),
+    u_plane: FixedArray::make(uv_stride * mb_h * 8, b'\x00'),
+    v_plane: FixedArray::make(uv_stride * mb_h * 8, b'\x00'),
     f_limit: FixedArray::make(mb_w * mb_h, 0),
     f_ilevel: FixedArray::make(mb_w * mb_h, 0),
     f_hev: FixedArray::make(mb_w * mb_h, 0),
@@ -640,14 +640,14 @@ fn Decoder::reconstruct(
   for j in 0..<16 {
     let row = (mb_y * 16 + j) * self.y_stride + mb_x * 16
     for i in 0..<16 {
-      self.y_plane[row + i] = b[y_off + j * bps + i]
+      self.y_plane[row + i] = b[y_off + j * bps + i].to_byte()
     }
   }
   for j in 0..<8 {
     let row = (mb_y * 8 + j) * self.uv_stride + mb_x * 8
     for i in 0..<8 {
-      self.u_plane[row + i] = b[u_off + j * bps + i]
-      self.v_plane[row + i] = b[v_off + j * bps + i]
+      self.u_plane[row + i] = b[u_off + j * bps + i].to_byte()
+      self.v_plane[row + i] = b[v_off + j * bps + i].to_byte()
     }
   }
 }

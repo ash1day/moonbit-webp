@@ -108,5 +108,10 @@ fn decode_image(
       None => ()
     }
   }
-  Bytes::makei(full_size, fn(i) { buf[i] })
+  if buf.length() == full_size {
+    // `buf` is not used after this point, so it can back the Bytes directly
+    buf.unsafe_reinterpret_as_bytes()
+  } else {
+    Bytes::makei(full_size, fn(i) { buf[i] })
+  }
 }

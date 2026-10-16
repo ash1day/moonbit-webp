@@ -37,101 +37,96 @@ fn abs(v : Int32) -> Int32 {
 
 ///|
 /// Filters the two pixels on either side of the edge
-fn do_filter2(buf : FixedArray[Int32], p : Int32, step : Int32) -> Unit {
-  let p1 = buf[p - 2 * step]
-  let p0 = buf[p - step]
-  let q0 = buf[p]
-  let q1 = buf[p + step]
+fn do_filter2(buf : FixedArray[Byte], p : Int32, step : Int32) -> Unit {
+  let p1 = buf[p - 2 * step].to_int()
+  let p0 = buf[p - step].to_int()
+  let q0 = buf[p].to_int()
+  let q1 = buf[p + step].to_int()
   let a = 3 * (q0 - p0) + sclip1(p1 - q1)
   let a1 = sclip2((a + 4) >> 3)
   let a2 = sclip2((a + 3) >> 3)
-  buf[p - step] = clip_8b(p0 + a2)
-  buf[p] = clip_8b(q0 - a1)
+  buf[p - step] = clip_8b(p0 + a2).to_byte()
+  buf[p] = clip_8b(q0 - a1).to_byte()
 }
 
 ///|
 /// Filters four pixels (inner edges, normal filter)
-fn do_filter4(buf : FixedArray[Int32], p : Int32, step : Int32) -> Unit {
-  let p1 = buf[p - 2 * step]
-  let p0 = buf[p - step]
-  let q0 = buf[p]
-  let q1 = buf[p + step]
+fn do_filter4(buf : FixedArray[Byte], p : Int32, step : Int32) -> Unit {
+  let p1 = buf[p - 2 * step].to_int()
+  let p0 = buf[p - step].to_int()
+  let q0 = buf[p].to_int()
+  let q1 = buf[p + step].to_int()
   let a = 3 * (q0 - p0)
   let a1 = sclip2((a + 4) >> 3)
   let a2 = sclip2((a + 3) >> 3)
   let a3 = (a1 + 1) >> 1
-  buf[p - 2 * step] = clip_8b(p1 + a3)
-  buf[p - step] = clip_8b(p0 + a2)
-  buf[p] = clip_8b(q0 - a1)
-  buf[p + step] = clip_8b(q1 - a3)
+  buf[p - 2 * step] = clip_8b(p1 + a3).to_byte()
+  buf[p - step] = clip_8b(p0 + a2).to_byte()
+  buf[p] = clip_8b(q0 - a1).to_byte()
+  buf[p + step] = clip_8b(q1 - a3).to_byte()
 }
 
 ///|
 /// Filters six pixels (macroblock edges, normal filter)
-fn do_filter6(buf : FixedArray[Int32], p : Int32, step : Int32) -> Unit {
-  let p2 = buf[p - 3 * step]
-  let p1 = buf[p - 2 * step]
-  let p0 = buf[p - step]
-  let q0 = buf[p]
-  let q1 = buf[p + step]
-  let q2 = buf[p + 2 * step]
+fn do_filter6(buf : FixedArray[Byte], p : Int32, step : Int32) -> Unit {
+  let p2 = buf[p - 3 * step].to_int()
+  let p1 = buf[p - 2 * step].to_int()
+  let p0 = buf[p - step].to_int()
+  let q0 = buf[p].to_int()
+  let q1 = buf[p + step].to_int()
+  let q2 = buf[p + 2 * step].to_int()
   let a = sclip1(3 * (q0 - p0) + sclip1(p1 - q1))
   let a1 = (27 * a + 63) >> 7
   let a2 = (18 * a + 63) >> 7
   let a3 = (9 * a + 63) >> 7
-  buf[p - 3 * step] = clip_8b(p2 + a3)
-  buf[p - 2 * step] = clip_8b(p1 + a2)
-  buf[p - step] = clip_8b(p0 + a1)
-  buf[p] = clip_8b(q0 - a1)
-  buf[p + step] = clip_8b(q1 - a2)
-  buf[p + 2 * step] = clip_8b(q2 - a3)
+  buf[p - 3 * step] = clip_8b(p2 + a3).to_byte()
+  buf[p - 2 * step] = clip_8b(p1 + a2).to_byte()
+  buf[p - step] = clip_8b(p0 + a1).to_byte()
+  buf[p] = clip_8b(q0 - a1).to_byte()
+  buf[p + step] = clip_8b(q1 - a2).to_byte()
+  buf[p + 2 * step] = clip_8b(q2 - a3).to_byte()
 }
 
 ///|
 /// High edge variance
-fn hev(
-  buf : FixedArray[Int32],
-  p : Int32,
-  step : Int32,
-  thresh : Int32,
-) -> Bool {
-  let p1 = buf[p - 2 * step]
-  let p0 = buf[p - step]
-  let q0 = buf[p]
-  let q1 = buf[p + step]
+fn hev(buf : FixedArray[Byte], p : Int32, step : Int32, thresh : Int32) -> Bool {
+  let p1 = buf[p - 2 * step].to_int()
+  let p0 = buf[p - step].to_int()
+  let q0 = buf[p].to_int()
+  let q1 = buf[p + step].to_int()
   abs(p1 - p0) > thresh || abs(q1 - q0) > thresh
 }
 
 ///|
 fn needs_filter(
-  buf : FixedArray[Int32],
+  buf : FixedArray[Byte],
   p : Int32,
   step : Int32,
   t : Int32,
 ) -> Bool {
-  let p1 = buf[p - 2 * step]
-  let p0 = buf[p - step]
-  let q0 = buf[p]
-  let q1 = buf[p + step]
+  let p1 = buf[p - 2 * step].to_int()
+  let p0 = buf[p - step].to_int()
+  let q0 = buf[p].to_int()
+  let q1 = buf[p + step].to_int()
   4 * abs(p0 - q0) + abs(p1 - q1) <= t
 }
 
 ///|
 fn needs_filter2(
-  buf : FixedArray[Int32],
+  buf : FixedArray[Byte],
   p : Int32,
   step : Int32,
   t : Int32,
   it : Int32,
 ) -> Bool {
-  let p3 = buf[p - 4 * step]
-  let p2 = buf[p - 3 * step]
-  let p1 = buf[p - 2 * step]
-  let p0 = buf[p - step]
-  let q0 = buf[p]
-  let q1 = buf[p + step]
-  let q2 = buf[p + 2 * step]
-  let q3 = buf[p + 3 * step]
+  let p3 = buf[p - 4 * step].to_int()
+  let p2 = buf[p - 3 * step].to_int()
+  let p1 = buf[p - 2 * step].to_int()
+  let p0 = buf[p - step].to_int()
+  let q0 = buf[p].to_int()
+  let q1 = buf[p + step].to_int()
+  let q2 = buf[p + 2 * step].to_int()
+  let q3 = buf[p + 3 * step].to_int()
   if 4 * abs(p0 - q0) + abs(p1 - q1) > t {
     return false
   }
@@ -145,7 +140,7 @@ fn needs_filter2(
 
 ///|
 fn simple_filter(
-  buf : FixedArray[Int32],
+  buf : FixedArray[Byte],
   p : Int32,
   step : Int32,
   along : Int32,
@@ -161,7 +156,7 @@ fn simple_filter(
 
 ///|
 fn simple_v_filter16(
-  buf : FixedArray[Int32],
+  buf : FixedArray[Byte],
   p : Int32,
   stride : Int32,
   thresh : Int32,
@@ -171,7 +166,7 @@ fn simple_v_filter16(
 
 ///|
 fn simple_h_filter16(
-  buf : FixedArray[Int32],
+  buf : FixedArray[Byte],
   p : Int32,
   stride : Int32,
   thresh : Int32,
@@ -181,7 +176,7 @@ fn simple_h_filter16(
 
 ///|
 fn simple_v_filter16i(
-  buf : FixedArray[Int32],
+  buf : FixedArray[Byte],
   p : Int32,
   stride : Int32,
   thresh : Int32,
@@ -193,7 +188,7 @@ fn simple_v_filter16i(
 
 ///|
 fn simple_h_filter16i(
-  buf : FixedArray[Int32],
+  buf : FixedArray[Byte],
   p : Int32,
   stride : Int32,
   thresh : Int32,
@@ -206,7 +201,7 @@ fn simple_h_filter16i(
 ///|
 /// FilterLoop26_C (macroblock edges) and FilterLoop24_C (inner edges)
 fn filter_loop(
-  buf : FixedArray[Int32],
+  buf : FixedArray[Byte],
   p : Int32,
   hstride : Int32,
   vstride : Int32,
@@ -233,7 +228,7 @@ fn filter_loop(
 
 ///|
 fn v_filter16(
-  buf : FixedArray[Int32],
+  buf : FixedArray[Byte],
   p : Int32,
   stride : Int32,
   thresh : Int32,
@@ -245,7 +240,7 @@ fn v_filter16(
 
 ///|
 fn h_filter16(
-  buf : FixedArray[Int32],
+  buf : FixedArray[Byte],
   p : Int32,
   stride : Int32,
   thresh : Int32,
@@ -257,7 +252,7 @@ fn h_filter16(
 
 ///|
 fn v_filter16i(
-  buf : FixedArray[Int32],
+  buf : FixedArray[Byte],
   p : Int32,
   stride : Int32,
   thresh : Int32,
@@ -281,7 +276,7 @@ fn v_filter16i(
 
 ///|
 fn h_filter16i(
-  buf : FixedArray[Int32],
+  buf : FixedArray[Byte],
   p : Int32,
   stride : Int32,
   thresh : Int32,
@@ -305,7 +300,7 @@ fn h_filter16i(
 
 ///|
 fn v_filter8(
-  buf : FixedArray[Int32],
+  buf : FixedArray[Byte],
   p : Int32,
   stride : Int32,
   thresh : Int32,
@@ -317,7 +312,7 @@ fn v_filter8(
 
 ///|
 fn h_filter8(
-  buf : FixedArray[Int32],
+  buf : FixedArray[Byte],
   p : Int32,
   stride : Int32,
   thresh : Int32,
@@ -329,7 +324,7 @@ fn h_filter8(
 
 ///|
 fn v_filter8i(
-  buf : FixedArray[Int32],
+  buf : FixedArray[Byte],
   p : Int32,
   stride : Int32,
   thresh : Int32,
@@ -351,7 +346,7 @@ fn v_filter8i(
 
 ///|
 fn h_filter8i(
-  buf : FixedArray[Int32],
+  buf : FixedArray[Byte],
   p : Int32,
   stride : Int32,
   thresh : Int32,

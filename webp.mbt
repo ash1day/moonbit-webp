@@ -56,7 +56,7 @@ pub fn decode(
   if lossless {
     @vp8l.decode_vp8l(webp_data)
   } else {
-    decode_lossy(webp_data, file)
+    decode_lossy(webp_data, file, width, height)
   }
 }
 
@@ -65,21 +65,13 @@ pub fn decode(
 fn decode_lossy(
   webp_data : Bytes,
   file : @riff.WebPFile,
+  width : Int32,
+  height : Int32,
 ) -> ImageData raise DecodeError {
-  let image = @vp8.decode_vp8(webp_data)
   match find_alpha_chunk(webp_data, file) {
-    Some(chunk) => {
-      let alpha = decode_alpha(chunk, image.width, image.height)
-      let data = Bytes::makei(image.data.length(), fn(i) {
-        if (i & 3) == 3 {
-          alpha[i >> 2]
-        } else {
-          image.data[i]
-        }
-      })
-      { width: image.width, height: image.height, data, }
-    }
-    None => image
+    Some(chunk) =>
+      @vp8.decode_vp8(webp_data, alpha=decode_alpha(chunk, width, height))
+    None => @vp8.decode_vp8(webp_data)
   }
 }
 

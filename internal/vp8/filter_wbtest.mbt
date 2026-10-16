@@ -206,18 +206,18 @@ let filter_input1 : FixedArray[Int32] = [
 fn check_filter(
   input : FixedArray[Int32],
   name : String,
-  run : (FixedArray[Int32], Int32, Int32) -> Unit,
+  run : (FixedArray[Byte], Int32, Int32) -> Unit,
   changes : Array[Int32],
 ) -> Unit raise {
-  let buf = input.copy()
+  let buf = FixedArray::makei(input.length(), fn(i) { input[i].to_byte() })
   run(buf, 8 * 40 + 8, 40)
   let expected = input.copy()
   for i = 0; i < changes.length(); i = i + 2 {
     expected[changes[i]] = changes[i + 1]
   }
   for i in 0..<buf.length() {
-    if buf[i] != expected[i] {
-      fail("\{name}: index \{i} is \{buf[i]}, expected \{expected[i]}")
+    if buf[i].to_int() != expected[i] {
+      fail("\{name}: index \{i} is \{buf[i].to_int()}, expected \{expected[i]}")
     }
   }
 }

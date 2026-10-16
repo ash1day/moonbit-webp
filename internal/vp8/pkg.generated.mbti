@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub fn decode_vp8(Bytes) -> @image.ImageData raise @image.DecodeError
+pub fn decode_vp8(Bytes, alpha? : FixedArray[Byte]) -> @image.ImageData raise @image.DecodeError
 
 pub fn frame_size(Bytes) -> (Int, Int) raise @image.DecodeError
 
