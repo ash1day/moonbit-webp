@@ -33,8 +33,8 @@
 - [x] 公開 API をルートパッケージの `decode(webp_data) -> ImageData` にまとめる
 - [x] testdata/alpha, alpha-extra を dwebp の出力と照合する
   - 簡易ファジング: alpha 5 ファイルの切り詰めと 1 バイト書き換え（約 36,000 通り）で panic なし
-- [ ] ALPH チャンクは位置を問わず最初の 1 つを使う。libwebp は VP8X があるときだけ、VP8 より前の最後の ALPH を使う（VP8X なしの RIFF + ALPH + VP8 はエラー、VP8 より後の ALPH は無視）
+- [x] ALPH チャンクは libwebp と同じく VP8 より前の最後の 1 つを使い、VP8 より後ろは無視する。VP8X がないときは最初のチャンクが VP8 / VP8L でなければエラー（dwebp で確認）
 - [ ] VP8X のキャンバスサイズはデコードした後に照合している。libwebp のようにフレームヘッダーだけ読んで先に照合すれば、不正なファイルで無駄にデコードしない
-- [ ] `decode` は RIFF を何度も解析し、チャンクを毎回コピーしている
+- [ ] `decode` は RIFF を 1 回だけ解析するが、`decode_vp8` / `decode_vp8l` がファイル全体を受け取って解析し直し、チャンクもコピーしている
 - [ ] アニメーション（ANIM / ANMF）
 - [ ] mooncakes.io への publish を検討（CLAUDE.md の方針も更新）
