@@ -1,5 +1,5 @@
 ///|
-pub using @image {type DecodeError, type ImageData}
+using @image {type DecodeError, type ImageData}
 
 ///|
 priv struct ColorCache {

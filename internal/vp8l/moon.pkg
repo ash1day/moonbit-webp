@@ -1,9 +1,9 @@
 import {
-  "ash1day/webp/lib/bitreader",
-  "ash1day/webp/lib/huffman",
-  "ash1day/webp/lib/transform",
-  "ash1day/webp/lib/riff",
-  "ash1day/webp/lib/image",
+  "ash1day/webp/internal/bitreader",
+  "ash1day/webp/internal/huffman",
+  "ash1day/webp/internal/transform",
+  "ash1day/webp/internal/riff",
+  "ash1day/webp/image",
 }
 
 import {

@@ -242,22 +242,3 @@ pub fn HuffmanTree::is_single_node(self : HuffmanTree) -> Bool {
     _ => false
   }
 }
-
-///|
-pub fn HuffmanTree::peek_symbol(
-  self : HuffmanTree,
-  br : @bitreader.BitReader,
-) -> (Int32, Int32)? {
-  match self.inner {
-    Single(symbol) => Some((0, symbol))
-    Tree(table_mask~, primary~, ..) => {
-      let v = (br.peek_full() & 0x7FFF_FFFFL).to_int()
-      let entry = primary[v & table_mask]
-      let length = entry >> 12
-      if length <= max_table_bits {
-        return Some((length, entry & 0xFFF))
-      }
-      None
-    }
-  }
-}

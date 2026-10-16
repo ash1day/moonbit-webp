@@ -1,6 +1,6 @@
 import {
-  "ash1day/webp/lib/riff",
-  "ash1day/webp/lib/image",
+  "ash1day/webp/internal/riff",
+  "ash1day/webp/image",
 }
 
 import {
