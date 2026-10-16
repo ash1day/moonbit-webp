@@ -270,3 +270,31 @@ test "an image with unused Huffman groups decodes like dwebp" {
     (1, 1, b"\x00\x00\x00\x00"),
   )
 }
+
+///|
+/// A normal (not simple) Huffman code for symbols 0 and 1, both of length 1:
+/// the code length code has the single symbol 1 and max_symbol is 2
+fn BitWriter::two_symbol_normal_code(self : BitWriter) -> Unit {
+  self.put(0, 1) // normal code
+  self.put(0, 4) // 4 code length code lengths: for 17, 18, 0 and 1
+  for length in [0, 0, 0, 1] {
+    self.put(length, 3)
+  }
+  self.put(1, 1) // max_symbol present
+  self.put(0, 3) // 2 bits
+  self.put(0, 2) // max_symbol = 2
+}
+
+///|
+test "codes of unused groups are read without building a table" {
+  let w = BitWriter::{ bits: [], }
+  w.two_symbol_normal_code()
+  w.two_symbol_normal_code()
+  let decoder = LosslessDecoder::new(
+    @bitreader.BitReader::new(w.to_bytes()),
+    1,
+    1,
+  )
+  assert_eq(decoder.read_huffman_code(280).is_single_node(), false)
+  assert_eq(decoder.read_huffman_code(280, keep=false).is_single_node(), true)
+}

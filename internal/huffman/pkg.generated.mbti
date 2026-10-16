@@ -6,6 +6,7 @@ import {
 }
 
 // Values
+pub fn validate_code_lengths(FixedArray[Int]) -> Unit raise HuffmanError
 
 // Errors
 pub(all) suberror HuffmanError {

@@ -54,10 +54,20 @@ pub fn HuffmanTree::build_two(zero : Int32, one : Int32) -> HuffmanTree {
 }
 
 ///|
-pub fn HuffmanTree::build_implicit(
+/// Checks that the code lengths describe a valid code, raising the same errors
+/// as `build_implicit` without building any table
+pub fn validate_code_lengths(
   code_lengths : FixedArray[Int32],
-) -> HuffmanTree raise HuffmanError {
-  // Build histogram
+) -> Unit raise HuffmanError {
+  ignore(histogram_of(code_lengths))
+}
+
+///|
+/// Returns the histogram of code lengths and the number of used symbols,
+/// raising if they do not form a valid code
+fn histogram_of(
+  code_lengths : FixedArray[Int32],
+) -> (FixedArray[Int32], Int32) raise HuffmanError {
   let mut num_symbols = 0
   let histogram = FixedArray::make(max_allowed_code_length + 1, 0)
   for i in 0..<code_lengths.length() {
@@ -67,10 +77,51 @@ pub fn HuffmanTree::build_implicit(
       num_symbols += 1
     }
   }
-  // Special cases
   if num_symbols == 0 {
     raise HuffmanError("no symbols in huffman tree")
   }
+  if num_symbols > 1 {
+    let mut max_length = max_allowed_code_length
+    while max_length > 1 && histogram[max_length] == 0 {
+      max_length -= 1
+    }
+    let mut codespace_used = 0
+    for i in 1..<=max_length {
+      codespace_used = (codespace_used << 1) + histogram[i]
+    }
+    if codespace_used != 1 << max_length {
+      raise HuffmanError("invalid huffman codespace")
+    }
+  }
+  (histogram, num_symbols)
+}
+
+///|
+/// Returns `table` with room for `needed` entries, keeping the first `used`.
+/// The capacity at least doubles, so building a table copies O(size) entries.
+fn grow(
+  table : FixedArray[Int32],
+  used : Int32,
+  needed : Int32,
+) -> FixedArray[Int32] {
+  if needed <= table.length() {
+    return table
+  }
+  let capacity = if needed > 2 * table.length() {
+    needed
+  } else {
+    2 * table.length()
+  }
+  let grown = FixedArray::make(capacity, 0)
+  table.blit_to(grown, len=used, src_offset=0, dst_offset=0)
+  grown
+}
+
+///|
+pub fn HuffmanTree::build_implicit(
+  code_lengths : FixedArray[Int32],
+) -> HuffmanTree raise HuffmanError {
+  let (histogram, num_symbols) = histogram_of(code_lengths)
   if num_symbols == 1 {
     let mut root_symbol = 0
     for i in 0..<code_lengths.length() {
@@ -86,17 +137,11 @@ pub fn HuffmanTree::build_implicit(
   while max_length > 1 && histogram[max_length] == 0 {
     max_length -= 1
   }
-  // Compute offsets and validate codespace
+  // Compute offsets (the codespace was validated by histogram_of)
   let offsets = FixedArray::make(16, 0)
-  let mut codespace_used = 0
   offsets[1] = histogram[0]
   for i in 1..<max_length {
     offsets[i + 1] = offsets[i] + histogram[i]
-    codespace_used = (codespace_used << 1) + histogram[i]
-  }
-  codespace_used = (codespace_used << 1) + histogram[max_length]
-  if codespace_used != 1 << max_length {
-    raise HuffmanError("invalid huffman codespace")
   }
   // Calculate table parameters
   let table_bits = if max_length < max_table_bits {
@@ -156,16 +201,7 @@ pub fn HuffmanTree::build_implicit(
           primary[subtable_prefix] = (length << 12) | subtable_start
           // Resize secondary to subtable_start + subtable_size
           let new_len = subtable_start + subtable_size
-          if new_len > secondary.length() {
-            let new_secondary = FixedArray::make(new_len, 0)
-            secondary.blit_to(
-              new_secondary,
-              len=secondary_len,
-              src_offset=0,
-              dst_offset=0,
-            )
-            secondary = new_secondary
-          }
+          secondary = grow(secondary, secondary_len, new_len)
           secondary_len = new_len
         }
         let symbol = sorted_symbols[si]
@@ -180,16 +216,7 @@ pub fn HuffmanTree::build_implicit(
       if length < max_length && (codeword & table_mask) == subtable_prefix {
         let current_len = secondary_len - subtable_start
         let new_len = secondary_len + current_len
-        if new_len > secondary.length() {
-          let new_secondary = FixedArray::make(new_len, 0)
-          secondary.blit_to(
-            new_secondary,
-            len=secondary_len,
-            src_offset=0,
-            dst_offset=0,
-          )
-          secondary = new_secondary
-        }
+        secondary = grow(secondary, secondary_len, new_len)
         secondary.blit_to(
           secondary,
           len=current_len,

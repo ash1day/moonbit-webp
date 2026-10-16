@@ -230,7 +230,7 @@ fn LosslessDecoder::read_huffman_codes(
           None => ()
         }
       }
-      group[j] = self.read_huffman_code(alpha_size)
+      group[j] = self.read_huffman_code(alpha_size, keep=mapping[i] >= 0)
     }
     if mapping[i] >= 0 {
       hufftree_groups[mapping[i]] = group
@@ -255,6 +255,7 @@ fn LosslessDecoder::read_huffman_codes(
 fn LosslessDecoder::read_huffman_code(
   self : LosslessDecoder,
   alphabet_size : Int32,
+  keep~ : Bool = true,
 ) -> @huffman.HuffmanTree raise DecodeError {
   let simple = read_bits(self.br, 1) == 1
   if simple {
@@ -285,7 +286,15 @@ fn LosslessDecoder::read_huffman_code(
     let new_code_lengths = self.read_huffman_code_lengths(
       code_length_code_lengths, alphabet_size,
     )
-    build_huffman(new_code_lengths)
+    if keep {
+      build_huffman(new_code_lengths)
+    } else {
+      // an unused group: check the code like libwebp, but build no table
+      @huffman.validate_code_lengths(new_code_lengths) catch {
+        @huffman.HuffmanError(msg) => raise Invalid(msg)
+      }
+      @huffman.HuffmanTree::build_single(0)
+    }
   }
 }
 
