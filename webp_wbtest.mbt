@@ -374,3 +374,28 @@ test "VP8X canvas size is checked before decoding the image" {
     "VP8X canvas size 11x7 does not match the image size 10x7",
   )
 }
+
+///|
+test "chunks beyond the RIFF size are rejected" {
+  // byte 4 holds the low byte of the RIFF size: 0x148 becomes 0x10c, which
+  // ends the RIFF data inside the ALPH chunk
+  check_error(
+    patch("alpha-extra/alpha_no_compression", 4, b'\x0c'),
+    "ALPH chunk exceeds the RIFF size",
+  )
+}
+
+///|
+test "a RIFF size that ends before the image chunk is rejected" {
+  let data = @fs.read_file_to_bytes("testdata/lossy-extra/test.webp")
+  // RIFF size 12: only the "WEBP" tag and the VP8 chunk header fit
+  let riff_size = [b'\x0c', b'\x00', b'\x00', b'\x00']
+  let patched = Bytes::makei(data.length(), fn(i) {
+    if i >= 4 && i < 8 {
+      riff_size[i - 4]
+    } else {
+      data[i]
+    }
+  })
+  check_error(patched, "VP8 chunk exceeds the RIFF size")
+}
