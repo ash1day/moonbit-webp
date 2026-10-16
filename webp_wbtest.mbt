@@ -303,3 +303,66 @@ test "without VP8X the image chunk must come first" {
     "ICCP chunk before the image without VP8X",
   )
 }
+
+///|
+fn check_limit_error(
+  webp_data : Bytes,
+  max_pixels : Int32,
+  message : String,
+) -> Unit raise {
+  try decode(webp_data, max_pixels~) |> ignore catch {
+    DecodeError(m) => assert_eq(m, message)
+  } noraise {
+    _ => fail("expected DecodeError(\{message})")
+  }
+}
+
+///|
+test "lossy images larger than max_pixels raise DecodeError" {
+  let data = @fs.read_file_to_bytes(
+    "testdata/alpha-extra/alpha_no_compression.webp",
+  )
+  check_limit_error(data, 255, "image size 16x16 exceeds 255 pixels")
+  let result = decode(data, max_pixels=256)
+  assert_eq(md5_hex(result.data), "78641692a66d86607429770638f06c56")
+}
+
+///|
+test "lossless images larger than max_pixels raise DecodeError" {
+  let data = @fs.read_file_to_bytes("testdata/regression/tiny.webp")
+  check_limit_error(data, 69, "image size 10x7 exceeds 69 pixels")
+  let result = decode(data, max_pixels=70)
+  assert_eq(md5_hex(result.data), "43f244c388586865f7913da7eaedabd3")
+}
+
+///|
+test "a tiny file claiming 16384x16384 pixels is rejected before allocating" {
+  // VP8L header only: signature, then width - 1 and height - 1 = 16383
+  let data = build_webp([("VP8L", b"\x2f\xff\xff\xff\x0f")])
+  check_limit_error(
+    data,
+    1 << 20,
+    "image size 16384x16384 exceeds 1048576 pixels",
+  )
+}
+
+///|
+test "VP8X canvas size is checked before decoding the image" {
+  let data = @fs.read_file_to_bytes("testdata/regression/tiny.webp")
+  let file = @riff.parse(data).unwrap()
+  let vp8x = file.chunks[0]
+  let vp8l = file.chunks[2]
+  // canvas width 11 instead of 10, and only the VP8L header without pixels
+  let canvas = Bytes::makei(vp8x.size, fn(i) {
+    if i == 4 {
+      b'\x0a'
+    } else {
+      data[vp8x.offset + i]
+    }
+  })
+  let header = Bytes::makei(5, fn(i) { data[vp8l.offset + i] })
+  check_error(
+    build_webp([("VP8X", canvas), ("VP8L", header)]),
+    "VP8X canvas size 11x7 does not match the image size 10x7",
+  )
+}

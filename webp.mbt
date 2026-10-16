@@ -6,8 +6,16 @@ pub using @image {type DecodeError, type ImageData}
 const ANIMATION_FLAG = 0x02
 
 ///|
-/// Decodes a WebP file to RGBA
-pub fn decode(webp_data : Bytes) -> ImageData raise DecodeError {
+/// The largest image a WebP file can hold (VP8L stores 14-bit dimensions)
+pub const MAX_PIXELS : Int32 = 16384 * 16384
+
+///|
+/// Decodes a WebP file to RGBA. Images with more than `max_pixels` pixels
+/// raise `DecodeError` before any pixel buffer is allocated.
+pub fn decode(
+  webp_data : Bytes,
+  max_pixels~ : Int32 = MAX_PIXELS,
+) -> ImageData raise DecodeError {
   let file = match @riff.parse(webp_data) {
     Some(f) => f
     None => raise DecodeError("invalid RIFF/WebP header")
@@ -22,18 +30,36 @@ pub fn decode(webp_data : Bytes) -> ImageData raise DecodeError {
   if vp8x is Some(header) && (header.flags & ANIMATION_FLAG) != 0 {
     raise DecodeError("animated WebP is not supported")
   }
-  let image = if find_chunk(webp_data, file, VP8L) is Some(_) {
+  let (width, height, lossless) = match find_chunk(webp_data, file, VP8L) {
+    Some(chunk) => {
+      let (width, height) = @vp8l.image_size(chunk)
+      (width, height, true)
+    }
+    None =>
+      match find_chunk(webp_data, file, VP8) {
+        Some(chunk) => {
+          let (width, height) = @vp8.frame_size(chunk)
+          (width, height, false)
+        }
+        None => raise DecodeError("no VP8 or VP8L chunk found")
+      }
+  }
+  if vp8x is Some({ canvas_width, canvas_height, .. }) &&
+    (canvas_width != width || canvas_height != height) {
+    raise DecodeError(
+      "VP8X canvas size \{canvas_width}x\{canvas_height} does not match the image size \{width}x\{height}",
+    )
+  }
+  if width * height > max_pixels {
+    raise DecodeError(
+      "image size \{width}x\{height} exceeds \{max_pixels} pixels",
+    )
+  }
+  if lossless {
     @vp8l.decode_vp8l(webp_data)
   } else {
     decode_lossy(webp_data, file)
   }
-  if vp8x is Some({ canvas_width, canvas_height, .. }) &&
-    (canvas_width != image.width || canvas_height != image.height) {
-    raise DecodeError(
-      "VP8X canvas size \{canvas_width}x\{canvas_height} does not match the image size \{image.width}x\{image.height}",
-    )
-  }
-  image
 }
 
 ///|
