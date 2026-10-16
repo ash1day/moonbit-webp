@@ -1,79 +1,102 @@
 # moonbit-webp
 
-A WebP decoder written in pure MoonBit. Lossless (VP8L) and lossy (VP8)
-images decode to the same pixels as libwebp's `dwebp`.
+A WebP decoder written in pure MoonBit. It decodes lossless (VP8L), lossy
+(VP8) and lossy-with-alpha images to RGBA, and produces exactly the same
+pixels as libwebp's `dwebp`.
 
-It is not published to mooncakes.io yet.
+Because it has no C dependency, it runs on every MoonBit backend: wasm-gc,
+wasm, JavaScript and native.
 
-## What works
+## Install
 
-- `decode` (the root package): reads simple and extended (VP8X) WebP files,
-  picks the lossless or lossy decoder and applies the ALPH chunk
-- RIFF container parsing (`lib/riff`)
-- VP8L lossless decoding to RGBA8 (`lib/vp8l`), including canonical Huffman
-  codes, the color cache, LZ77 backward references and all four inverse
-  transforms (predictor, color, subtract-green, color indexing)
-- VP8 lossy decoding to RGBA8 (`lib/vp8`), bit-exact with libwebp: boolean
-  decoder, intra prediction, inverse DCT/WHT, simple and normal loop filters,
-  and the fancy chroma upsampling that `dwebp` uses by default
-- Alpha for lossy images: the ALPH chunk, uncompressed or VP8L-compressed,
-  with the horizontal, vertical and gradient filters
-
-Animated images raise `DecodeError`.
-
-```moonbit
-// ImageData { width, height, data }
-let image = @webp.decode(webp_bytes) catch {
-  // Write `DecodeError(msg)`, not `@webp.DecodeError(msg)`: the type is
-  // re-exported from `lib/image`, so only the unqualified constructor resolves
-  DecodeError(msg) => {
-    println(msg)
-    return
-  }
-}
+```bash
+moon add ash1day/webp
 ```
 
-`data` holds `width * height * 4` bytes in RGBA order.
+Then import `ash1day/webp` in your package's `moon.pkg`.
 
-`decode` reads the image size from the headers before allocating anything.
-Pass `max_pixels` to reject large images from untrusted input; the default,
-`MAX_PIXELS` (16384 x 16384), is the largest size the format allows, so a
-small file can still make `decode` allocate 1 GiB:
+## Usage
+
+```moonbit
+let image = @webp.decode(webp_bytes) catch {
+  // Match the constructors without the package prefix:
+  // `DecodeError` is re-exported from `ash1day/webp/image`, so
+  // `@webp.Invalid(message)` does not resolve
+  Invalid(message) => abort("corrupt file: \{message}")
+  Unsupported(message) => abort("not supported: \{message}")
+  TooLarge(message) => abort(message)
+}
+// image.width, image.height
+// image.data: width * height * 4 bytes, RGBA, not premultiplied
+```
+
+`DecodeError` also implements `Show`, so `e.to_string()` gives a readable
+message such as `invalid WebP: bad VP8 start code`.
+
+### Untrusted input
+
+`decode` reads the image size from the headers and checks it before it
+allocates any pixel buffer. By default it accepts any size the format allows
+(16384 x 16384), which lets a file of a few bytes make `decode` allocate
+several gigabytes. Set `max_pixels` when the input comes from outside:
 
 ```moonbit
 let image = @webp.decode(webp_bytes, max_pixels=4096 * 4096)
 ```
 
+Decoding a lossy image currently needs about 15 bytes of memory per pixel
+(for example 350 MB for a 24-megapixel image); lossless images need less.
+
+## What is supported
+
+- Simple and extended (VP8X) WebP files
+- Lossless images: all transforms, the color cache and LZ77 references
+- Lossy images: all intra prediction modes, both loop filters and the fancy
+  chroma upsampling that `dwebp` uses by default
+- Alpha for lossy images (the ALPH chunk), uncompressed or compressed, with
+  every filter
+
+Not supported:
+
+- Animation (`Unsupported` is raised)
+- Color profiles (ICCP) and EXIF/XMP metadata are ignored
+- Encoding
+
+## How it is tested
+
+```bash
+moon test --target all
+```
+
+- Every test image in `testdata/` (about 50 lossless, lossy and alpha images
+  from libwebp's test vectors and the image-rs test suite) is decoded and the
+  MD5 of the RGBA output is compared with `dwebp -pam`
+- The lossy building blocks (transforms, predictors, loop filters,
+  upsampling) are compared with values produced by libwebp's C functions
+- Every truncation and many single-byte corruptions of several files must
+  raise `DecodeError` instead of crashing
+- CI runs the tests on all four backends
+
+Decoding the 24-megapixel `testdata/lossy-extra/bryce.webp` takes about
+0.9 s on native and 2.2 s on wasm-gc.
+
 ## Packages
+
+Only the root package is public. The decoders live under `internal/` and
+cannot be imported from other modules.
 
 | Package | Role |
 |---------|------|
-| (root) | `decode`, VP8X and ALPH |
-| `lib/image` | `ImageData` and `DecodeError` |
-| `lib/riff` | RIFF / WebP container chunks |
-| `lib/bitreader` | LSB-first bit reader |
-| `lib/huffman` | Canonical Huffman trees |
-| `lib/transform` | VP8L inverse transforms |
-| `lib/vp8l` | VP8L decoder |
-| `lib/vp8` | VP8 decoder |
-
-## Tests
-
-```bash
-moon test
-```
-
-The decoders are checked against the MD5 of the RGBA output of `dwebp` for the
-images in `testdata/lossless`, `testdata/lossless-extra`, `testdata/lossy`,
-`testdata/lossy-extra`, `testdata/alpha`, `testdata/alpha-extra` and
-`testdata/regression`. The VP8 building blocks (transforms, predictors, loop
-filters, upsampling) are also checked against values produced by libwebp's C
-functions. Malformed input raises `DecodeError` instead of crashing. Test
-images come from
-[image-rs/image-webp](https://github.com/image-rs/image-webp) and
-[libwebp-test-data](https://github.com/webmproject/libwebp-test-data); see
-[testdata/CREDITS.md](testdata/CREDITS.md).
+| `ash1day/webp` | `decode`, VP8X and ALPH handling |
+| `ash1day/webp/image` | `ImageData` and `DecodeError` (re-exported by the root) |
+| `internal/vp8l` | Lossless decoder |
+| `internal/vp8` | Lossy decoder |
+| `internal/riff`, `bitreader`, `huffman`, `transform` | Building blocks |
 
 ## License
 
-Apache-2.0
+Apache-2.0. The decoders are ported from
+[libwebp](https://chromium.googlesource.com/webm/libwebp) (BSD-3-Clause) and
+[image-webp](https://github.com/image-rs/image-webp) (MIT or Apache-2.0); see
+[NOTICE](NOTICE). Test images are credited in
+[testdata/CREDITS.md](testdata/CREDITS.md).

@@ -13,9 +13,9 @@
 
 - [x] apply_subtract_green と apply_subtract_green_bounded の重複をなくす
 - [x] color cache を Int (ARGB) で持ち、1 ピクセルごとの配列確保をやめる
-- [ ] riff の非推奨警告（`derive(Show)`、`not(...)`）を解消する
-- [x] 簡易ファジング: lossless 3 ファイルの切り詰めと 1 バイト書き換え（約 7,500 通り）で panic なし。テストには入れていない
-- [x] ヘッダーの幅・高さだけを見て `width * height * 4` を確保するので、30 バイトのファイルで最大 1 GiB 要求できる。`decode` の `max_pixels` で上限を指定でき、確保の前に照合する（既定値は形式上の最大 16384 x 16384 で、dwebp が読めるものは拒否しない）。`decode_vp8` / `decode_vp8l` を直接呼ぶと上限はかからない
+- [x] riff の非推奨警告（`derive(Show)`、`not(...)`）を解消する（警告 0 件、CI で `--deny-warn`）
+- [x] 簡易ファジング: lossless 3 ファイルの切り詰めと 1 バイト書き換え（約 7,500 通り）で panic なし。小さいファイル 5 枚の全切り詰めと 1 バイト書き換えを `robustness_wbtest.mbt` で回帰テストにした
+- [x] ヘッダーの幅・高さだけを見て `width * height * 4` を確保するので、30 バイトのファイルで最大 1 GiB 要求できる。`decode` の `max_pixels` で上限を指定でき、確保の前に照合する（既定値は形式上の最大 16384 x 16384 で、dwebp が読めるものは拒否しない）。`decode_vp8` / `decode_vp8l` は `internal/` に移したので利用者からは呼べない
 - [x] 予測モードを libwebp と同じく下位 4 bit で解釈し、14, 15 はモード 0 として扱う
 
 ## lossy 対応
@@ -27,7 +27,7 @@
   - 簡易ファジング: 3 ファイルの切り詰めと 1 バイト書き換え（約 2,700 通り）で panic なし
 - [x] `ImageData` / `DecodeError` を `lib/image` に移す（`lib/vp8l` とルートは `pub using` で再公開）
 - [ ] テスト画像に無いヘッダー値: `ref_lf_delta` / `mode_lf_delta` が 0 以外、segment の `absolute_delta = 0`（libwebp のエンコーダは出力しない）。sharpness 3 と 6 は cwebp で作った画像で dwebp と一致を確認済み（リポジトリには未追加）
-- [ ] bryce（11158x2156）のデコードに 5 秒、約 380 MB かかる。平面を `Int` ではなく `Byte` で持つ、変換を省くなどで減らせる
+- [ ] lossy のデコードに約 15 バイト/画素かかる（bryce 11158x2156 で最大 350 MB、native 0.86 秒）。Y/U/V 平面を `Int` ではなく `Byte` で持つ、RGBA を `FixedArray` から `Bytes` にコピーしない、alpha をその場で書き込む、で減らせる
 - [x] ALPH チャンク（圧縮なし / VP8L 圧縮、フィルター 0〜3）
 - [x] VP8X コンテナ（チャンクサイズ、アニメーションの拒否、キャンバスと画像のサイズの一致）
 - [x] 公開 API をルートパッケージの `decode(webp_data) -> ImageData` にまとめる
@@ -37,4 +37,14 @@
 - [x] VP8X のキャンバスサイズを、libwebp と同じくフレームヘッダーだけ読んでデコードの前に照合する
 - [ ] `decode` は RIFF を 1 回だけ解析するが、`decode_vp8` / `decode_vp8l` がファイル全体を受け取って解析し直し、チャンクもコピーしている
 - [ ] アニメーション（ANIM / ANMF）
-- [ ] mooncakes.io への publish を検討（CLAUDE.md の方針も更新）
+- [ ] mooncakes.io への publish（ユーザーが決める）
+
+## 公開の準備
+
+- [x] testdata をパッケージから除外（`.moonignore`、26 MB → 67 KB）。未使用の `testdata/reference/` と `libwebp_tests.md5` を削除
+- [x] 実装を `internal/` に移し、公開 API を `decode` / `MAX_PIXELS` / `ImageData` / `DecodeError` に絞る
+- [x] `NOTICE` に libwebp (BSD-3-Clause) と image-webp (MIT) の表示
+- [x] `DecodeError` を `Invalid` / `Unsupported` / `TooLarge` に分け、`Show` を実装
+- [x] `pkg.generated.mbti` をコミット、CI（`--deny-warn`、fmt、mbti の差分、4 ターゲットのテスト）
+- [ ] CI が GitHub 上で通ることを確認（push 後）
+- [ ] `ImageData` を他の MoonBit 画像ライブラリと相互運用しやすくする（変換関数や PNG 書き出しの例）
