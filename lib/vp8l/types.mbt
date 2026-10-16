@@ -1,14 +1,5 @@
 ///|
-pub(all) suberror DecodeError {
-  DecodeError(String)
-}
-
-///|
-pub(all) struct ImageData {
-  width : Int32
-  height : Int32
-  data : Bytes
-}
+pub using @image {type DecodeError, type ImageData}
 
 ///|
 priv struct ColorCache {

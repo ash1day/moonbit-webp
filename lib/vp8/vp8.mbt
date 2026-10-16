@@ -1,6 +1,8 @@
 ///|
 /// Decodes the VP8 (lossy) image of a WebP file to RGBA
-pub fn decode_vp8(webp_data : Bytes) -> @vp8l.ImageData raise @vp8l.DecodeError {
+pub fn decode_vp8(
+  webp_data : Bytes,
+) -> @image.ImageData raise @image.DecodeError {
   let (hdr, br) = parse_frame_header(find_vp8_chunk(webp_data))
   let dec = Decoder::new(hdr, br)
   dec.decode_frame()

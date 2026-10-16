@@ -29,20 +29,20 @@ priv struct FrameHeader {
 }
 
 ///|
-fn find_vp8_chunk(webp_data : Bytes) -> Bytes raise @vp8l.DecodeError {
+fn find_vp8_chunk(webp_data : Bytes) -> Bytes raise @image.DecodeError {
   let file = match @riff.parse(webp_data) {
     Some(f) => f
-    None => raise @vp8l.DecodeError("invalid RIFF/WebP header")
+    None => raise @image.DecodeError("invalid RIFF/WebP header")
   }
   for chunk in file.chunks {
     if chunk.chunk_type == @riff.ChunkType::VP8 {
       if chunk.size > webp_data.length() - chunk.offset {
-        raise @vp8l.DecodeError("VP8 chunk exceeds file size")
+        raise @image.DecodeError("VP8 chunk exceeds file size")
       }
       return Bytes::makei(chunk.size, fn(i) { webp_data[chunk.offset + i] })
     }
   }
-  raise @vp8l.DecodeError("no VP8 chunk found")
+  raise @image.DecodeError("no VP8 chunk found")
 }
 
 ///|
@@ -64,34 +64,34 @@ fn read_optional_signed(br : BoolDecoder, n : Int32) -> Int32 {
 /// and the boolean decoder positioned at the per-macroblock modes.
 fn parse_frame_header(
   chunk : Bytes,
-) -> (FrameHeader, BoolDecoder) raise @vp8l.DecodeError {
+) -> (FrameHeader, BoolDecoder) raise @image.DecodeError {
   if chunk.length() < 10 {
-    raise @vp8l.DecodeError("truncated VP8 header")
+    raise @image.DecodeError("truncated VP8 header")
   }
   let bits = chunk[0].to_int() |
     (chunk[1].to_int() << 8) |
     (chunk[2].to_int() << 16)
   if (bits & 1) != 0 {
-    raise @vp8l.DecodeError("not a key frame")
+    raise @image.DecodeError("not a key frame")
   }
   if ((bits >> 1) & 7) > 3 {
-    raise @vp8l.DecodeError("unknown VP8 profile")
+    raise @image.DecodeError("unknown VP8 profile")
   }
   if ((bits >> 4) & 1) == 0 {
-    raise @vp8l.DecodeError("frame not displayable")
+    raise @image.DecodeError("frame not displayable")
   }
   let partition_length = bits >> 5
   if chunk[3] != b'\x9d' || chunk[4] != b'\x01' || chunk[5] != b'\x2a' {
-    raise @vp8l.DecodeError("bad VP8 start code")
+    raise @image.DecodeError("bad VP8 start code")
   }
   let width = ((chunk[7].to_int() << 8) | chunk[6].to_int()) & 0x3fff
   let height = ((chunk[9].to_int() << 8) | chunk[8].to_int()) & 0x3fff
   if width == 0 || height == 0 {
-    raise @vp8l.DecodeError("zero width or height")
+    raise @image.DecodeError("zero width or height")
   }
   let rest = chunk.length() - 10
   if partition_length > rest {
-    raise @vp8l.DecodeError("bad partition length")
+    raise @image.DecodeError("bad partition length")
   }
   let br = BoolDecoder::new(slice(chunk, 10, partition_length))
   let _color_space = br.read_bool(128)
@@ -148,7 +148,7 @@ fn parse_frame_header(
   let sizes_start = 10 + partition_length
   let last_part = num_partitions - 1
   if rest - partition_length < 3 * last_part {
-    raise @vp8l.DecodeError("cannot parse partitions")
+    raise @image.DecodeError("cannot parse partitions")
   }
   let mut part_start = sizes_start + 3 * last_part
   let mut size_left = chunk.length() - part_start
