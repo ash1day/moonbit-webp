@@ -1,0 +1,27 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "ash1day/webp/internal/huffman"
+
+import {
+  "ash1day/webp/internal/bitreader",
+}
+
+// Values
+
+// Errors
+pub(all) suberror HuffmanError {
+  HuffmanError(String)
+}
+
+// Types and methods
+pub struct HuffmanTree {
+  // private fields
+}
+pub fn HuffmanTree::build_implicit(FixedArray[Int]) -> Self raise HuffmanError
+pub fn HuffmanTree::build_single(Int) -> Self
+pub fn HuffmanTree::build_two(Int, Int) -> Self
+pub fn HuffmanTree::is_single_node(Self) -> Bool
+pub fn HuffmanTree::read_symbol(Self, @bitreader.BitReader) -> Int raise @bitreader.BitReaderError
+
+// Type aliases
+
+// Traits

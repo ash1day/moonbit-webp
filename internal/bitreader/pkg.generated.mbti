@@ -1,0 +1,27 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "ash1day/webp/internal/bitreader"
+
+// Values
+
+// Errors
+pub(all) suberror BitReaderError {
+  BitReaderError(String)
+}
+
+// Types and methods
+pub(all) struct BitReader {
+  data : Bytes
+  mut buffer : Int64
+  mut nbits : Int
+  mut byte_pos : Int
+}
+pub fn BitReader::consume(Self, Int) -> Unit raise BitReaderError
+pub fn BitReader::fill(Self) -> Unit
+pub fn BitReader::new(Bytes) -> Self
+pub fn BitReader::peek(Self, Int) -> Int
+pub fn BitReader::peek_full(Self) -> Int64
+pub fn BitReader::read_bits(Self, Int) -> Int raise BitReaderError
+
+// Type aliases
+
+// Traits

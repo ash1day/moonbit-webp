@@ -1,0 +1,59 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "ash1day/webp/internal/riff"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn parse(Bytes) -> WebPFile?
+
+// Errors
+
+// Types and methods
+pub(all) struct Chunk {
+  chunk_type : ChunkType
+  offset : Int
+  size : Int
+} derive(Eq, @debug.Debug)
+#deprecated
+pub fn Chunk::equal(Self, Self) -> Bool
+#deprecated
+pub fn Chunk::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn Chunk::to_repr(Self) -> @debug.Repr
+
+pub(all) enum ChunkType {
+  VP8
+  VP8L
+  VP8X
+  ALPH
+  ANIM
+  ANMF
+  ICCP
+  EXIF
+  XMP
+  Unknown(Bytes)
+} derive(Eq, @debug.Debug)
+#deprecated
+pub fn ChunkType::equal(Self, Self) -> Bool
+pub fn ChunkType::fourcc(Self) -> String
+#deprecated
+pub fn ChunkType::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn ChunkType::to_repr(Self) -> @debug.Repr
+
+pub(all) struct WebPFile {
+  file_size : Int
+  chunks : Array[Chunk]
+} derive(Eq, @debug.Debug)
+#deprecated
+pub fn WebPFile::equal(Self, Self) -> Bool
+#deprecated
+pub fn WebPFile::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn WebPFile::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

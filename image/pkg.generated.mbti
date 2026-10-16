@@ -1,0 +1,25 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "ash1day/webp/image"
+
+// Values
+
+// Errors
+pub(all) suberror DecodeError {
+  Invalid(String)
+  Unsupported(String)
+  TooLarge(String)
+}
+pub fn DecodeError::output(Self, &Logger) -> Unit
+pub fn DecodeError::to_string(Self) -> String
+pub impl Show for DecodeError
+
+// Types and methods
+pub(all) struct ImageData {
+  width : Int
+  height : Int
+  data : Bytes
+}
+
+// Type aliases
+
+// Traits

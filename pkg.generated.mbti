@@ -1,0 +1,22 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "ash1day/webp"
+
+import {
+  "ash1day/webp/image",
+}
+
+// Values
+pub const MAX_PIXELS : Int = 268435456
+
+pub fn decode(Bytes, max_pixels? : Int) -> @image.ImageData raise @image.DecodeError
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+pub using @image {type DecodeError}
+
+pub using @image {type ImageData}
+
+// Traits
