@@ -37,7 +37,7 @@
 - [x] VP8X のキャンバスサイズを、libwebp と同じくフレームヘッダーだけ読んでデコードの前に照合する
 - [ ] `decode` は RIFF を 1 回だけ解析するが、`decode_vp8` / `decode_vp8l` がファイル全体を受け取って解析し直し、チャンクもコピーしている
 - [ ] アニメーション（ANIM / ANMF）
-- [ ] mooncakes.io への publish（ユーザーが決める）
+- [ ] mooncakes.io への publish（2026-10-16 時点の判断: 今は公開しない。dry-run は成功済み）
 
 ## 公開の準備
 
