@@ -82,7 +82,7 @@ fn check_riff_size(
   webp_data : Bytes,
   file : @riff.WebPFile,
 ) -> Unit raise DecodeError {
-  // the size field counts from byte 8; bytes after the RIFF data are ignored
+  // the size field counts from byte 8; the chunks before the image must fit
   if file.file_size < 0 || file.file_size > webp_data.length() - 8 {
     raise Invalid("file is shorter than the RIFF size")
   }
