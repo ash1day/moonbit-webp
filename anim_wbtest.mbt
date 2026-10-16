@@ -26,3 +26,19 @@ test "parse_frames reads the rectangle of each frame" {
     (0, 0, 64, 63),
   ])
 }
+
+///|
+/// libwebp's demuxer requires the 16-byte frame header (NewFrame)
+test "parse_frames rejects an ANMF chunk shorter than 16 bytes" {
+  let vp8x = Bytes::makei(10, fn(i) { if i == 0 { b'\x02' } else { b'\x00' } })
+  for size = 15; size >= 0; size = size - 1 {
+    let data = build_webp([("VP8X", vp8x), ("ANMF", Bytes::make(size, b'\x00'))])
+    let file = @riff.parse(data).unwrap()
+    try parse_frames(data, file) |> ignore catch {
+      Invalid(m) => assert_eq(m, "ANMF chunk is shorter than 16 bytes: \{size}")
+      _ => fail("expected Invalid for \{size} bytes")
+    } noraise {
+      _ => fail("expected Invalid for \{size} bytes")
+    }
+  }
+}

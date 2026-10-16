@@ -18,6 +18,9 @@ fn parse_frames(
   let frames = []
   for chunk in file.chunks {
     if chunk.chunk_type is ANMF {
+      if chunk.size < 16 {
+        raise Invalid("ANMF chunk is shorter than 16 bytes: \{chunk.size}")
+      }
       let anmf = payload(webp_data, chunk)
       // offsets are stored divided by 2, sizes minus 1
       frames.push({
