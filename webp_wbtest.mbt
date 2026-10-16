@@ -156,38 +156,44 @@ test "VP8X chunk must be 10 bytes" {
 }
 
 ///|
-/// Rebuilds the 16x16 alpha_no_compression image with another ALPH payload
-fn with_alpha_chunk(alpha : Bytes) -> Bytes raise {
-  let data = @fs.read_file_to_bytes(
-    "testdata/alpha-extra/alpha_no_compression.webp",
-  )
-  let file = @riff.parse(data).unwrap()
-  let out = Buffer()
-  fn write_chunk(fourcc : String, payload : Bytes) {
-    out.write_string_utf8(fourcc) |> ignore
-    out.write_int_le(payload.length())
-    out.write_bytes(payload)
+/// Builds a WebP file from (FourCC, payload) pairs
+fn build_webp(chunks : Array[(String, Bytes)]) -> Bytes {
+  let body = Buffer()
+  for chunk in chunks {
+    let (fourcc, payload) = chunk
+    body.write_string_utf8(fourcc) |> ignore
+    body.write_int_le(payload.length())
+    body.write_bytes(payload)
     if payload.length() % 2 == 1 {
-      out.write_byte(b'\x00')
+      body.write_byte(b'\x00')
     }
   }
-
-  for chunk in file.chunks {
-    let payload = Bytes::makei(chunk.size, fn(i) { data[chunk.offset + i] })
-    match chunk.chunk_type {
-      VP8X => write_chunk("VP8X", payload)
-      ALPH => write_chunk("ALPH", alpha)
-      VP8 => write_chunk("VP8 ", payload)
-      _ => ()
-    }
-  }
-  let body = out.to_bytes()
   let riff = Buffer()
   riff.write_string_utf8("RIFF") |> ignore
   riff.write_int_le(body.length() + 4)
   riff.write_string_utf8("WEBP") |> ignore
-  riff.write_bytes(body)
+  riff.write_bytes(body.to_bytes())
   riff.to_bytes()
+}
+
+///|
+/// The VP8X, ALPH and VP8 payloads of the 16x16 alpha_no_compression image
+fn alpha_test_chunks() -> (Bytes, Bytes, Bytes) raise {
+  let data = @fs.read_file_to_bytes(
+    "testdata/alpha-extra/alpha_no_compression.webp",
+  )
+  let file = @riff.parse(data).unwrap()
+  let payloads = file.chunks.map(fn(chunk) {
+    Bytes::makei(chunk.size, fn(i) { data[chunk.offset + i] })
+  })
+  (payloads[0], payloads[1], payloads[2])
+}
+
+///|
+/// Rebuilds the 16x16 alpha_no_compression image with another ALPH payload
+fn with_alpha_chunk(alpha : Bytes) -> Bytes raise {
+  let (vp8x, _, vp8) = alpha_test_chunks()
+  build_webp([("VP8X", vp8x), ("ALPH", alpha), ("VP8 ", vp8)])
 }
 
 ///|
@@ -244,4 +250,56 @@ test "malformed lossless-compressed alpha raises DecodeError" {
       _ => fail("expected DecodeError for fill \{fill}")
     }
   }
+}
+
+///|
+/// An uncompressed ALPH payload that makes every pixel's alpha 0x80
+fn constant_alpha() -> Bytes {
+  Bytes::makei(1 + 16 * 16, fn(i) { if i == 0 { b'\x00' } else { b'\x80' } })
+}
+
+///|
+test "the last ALPH chunk before VP8 is used" {
+  // expected values are from dwebp -pam on the same chunks
+  let (vp8x, alpha, vp8) = alpha_test_chunks()
+  let result = decode(
+    build_webp([
+      ("VP8X", vp8x),
+      ("ALPH", alpha),
+      ("ALPH", constant_alpha()),
+      ("VP8 ", vp8),
+    ]),
+  )
+  assert_eq(md5_hex(result.data), "711f0dd53c0158d83bf5cea28427d7f2")
+}
+
+///|
+test "ALPH chunks after VP8 are ignored" {
+  let (vp8x, alpha, vp8) = alpha_test_chunks()
+  let after_only = decode(
+    build_webp([("VP8X", vp8x), ("VP8 ", vp8), ("ALPH", constant_alpha())]),
+  )
+  assert_eq(md5_hex(after_only.data), "877731de5af73ba624d64cd36bf74d61")
+  let before_and_after = decode(
+    build_webp([
+      ("VP8X", vp8x),
+      ("ALPH", alpha),
+      ("VP8 ", vp8),
+      ("ALPH", constant_alpha()),
+    ]),
+  )
+  assert_eq(md5_hex(before_and_after.data), "78641692a66d86607429770638f06c56")
+}
+
+///|
+test "without VP8X the image chunk must come first" {
+  let (_, _, vp8) = alpha_test_chunks()
+  check_error(
+    build_webp([("ALPH", constant_alpha()), ("VP8 ", vp8)]),
+    "ALPH chunk before the image without VP8X",
+  )
+  check_error(
+    build_webp([("ICCP", b"abcd"), ("VP8 ", vp8)]),
+    "ICCP chunk before the image without VP8X",
+  )
 }
