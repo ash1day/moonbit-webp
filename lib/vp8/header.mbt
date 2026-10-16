@@ -60,11 +60,9 @@ fn read_optional_signed(br : BoolDecoder, n : Int32) -> Int32 {
 }
 
 ///|
-/// Parses the frame header and the first partition header. Returns the header
-/// and the boolean decoder positioned at the per-macroblock modes.
-fn parse_frame_header(
-  chunk : Bytes,
-) -> (FrameHeader, BoolDecoder) raise @image.DecodeError {
+/// Reads the width and height from the 10-byte frame header of a VP8 chunk
+/// payload, validating the header without decoding anything
+pub fn frame_size(chunk : Bytes) -> (Int32, Int32) raise @image.DecodeError {
   if chunk.length() < 10 {
     raise @image.DecodeError("truncated VP8 header")
   }
@@ -80,7 +78,6 @@ fn parse_frame_header(
   if ((bits >> 4) & 1) == 0 {
     raise @image.DecodeError("frame not displayable")
   }
-  let partition_length = bits >> 5
   if chunk[3] != b'\x9d' || chunk[4] != b'\x01' || chunk[5] != b'\x2a' {
     raise @image.DecodeError("bad VP8 start code")
   }
@@ -89,6 +86,20 @@ fn parse_frame_header(
   if width == 0 || height == 0 {
     raise @image.DecodeError("zero width or height")
   }
+  (width, height)
+}
+
+///|
+/// Parses the frame header and the first partition header. Returns the header
+/// and the boolean decoder positioned at the per-macroblock modes.
+fn parse_frame_header(
+  chunk : Bytes,
+) -> (FrameHeader, BoolDecoder) raise @image.DecodeError {
+  let (width, height) = frame_size(chunk)
+  let partition_length = (
+      chunk[0].to_int() | (chunk[1].to_int() << 8) | (chunk[2].to_int() << 16)
+    ) >>
+    5
   let rest = chunk.length() - 10
   if partition_length > rest {
     raise @image.DecodeError("bad partition length")

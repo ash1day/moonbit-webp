@@ -23,6 +23,20 @@ pub fn decode_vp8l(webp_data : Bytes) -> ImageData raise DecodeError {
     webp_data[chunk.offset + i]
   })
   let br = @bitreader.BitReader::new(chunk_data)
+  let (width, height) = read_header(br)
+  let data = decode_image(br, width, height)
+  { width, height, data, }
+}
+
+///|
+/// Reads the width and height from the 5-byte header of a VP8L chunk payload,
+/// validating the header without decoding anything
+pub fn image_size(chunk : Bytes) -> (Int32, Int32) raise DecodeError {
+  read_header(@bitreader.BitReader::new(chunk))
+}
+
+///|
+fn read_header(br : @bitreader.BitReader) -> (Int32, Int32) raise DecodeError {
   let signature = read_bits(br, 8)
   if signature != 0x2F {
     raise DecodeError("invalid VP8L signature: \{signature}")
@@ -34,8 +48,7 @@ pub fn decode_vp8l(webp_data : Bytes) -> ImageData raise DecodeError {
   if version != 0 {
     raise DecodeError("invalid VP8L version: \{version}")
   }
-  let data = decode_image(br, width, height)
-  { width, height, data, }
+  (width, height)
 }
 
 ///|
