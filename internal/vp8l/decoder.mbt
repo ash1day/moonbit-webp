@@ -272,7 +272,15 @@ fn LosslessDecoder::read_huffman_code(
       if one_symbol >= alphabet_size {
         raise Invalid("simple huffman symbol out of range")
       }
-      @huffman.HuffmanTree::build_two(zero_symbol, one_symbol)
+      // Like code lengths of 1 for both symbols: the smaller symbol gets code
+      // 0, and a symbol named twice is a single-symbol code reading no bits
+      if zero_symbol == one_symbol {
+        @huffman.HuffmanTree::build_single(zero_symbol)
+      } else if zero_symbol < one_symbol {
+        @huffman.HuffmanTree::build_two(zero_symbol, one_symbol)
+      } else {
+        @huffman.HuffmanTree::build_two(one_symbol, zero_symbol)
+      }
     }
   } else {
     let code_length_code_lengths = FixedArray::make(code_length_codes, 0)

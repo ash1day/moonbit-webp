@@ -208,6 +208,26 @@ fn BitWriter::single_symbol_code(self : BitWriter, symbol : Int32) -> Unit {
 }
 
 ///|
+/// Wraps a VP8L chunk payload in a RIFF container
+fn vp8l_file(payload : Bytes) -> Bytes {
+  let size = payload.length()
+  let le32 = fn(v : Int32) -> Array[Byte] {
+    [v.to_byte(), (v >> 8).to_byte(), (v >> 16).to_byte(), (v >> 24).to_byte()]
+  }
+  let file : Array[Byte] = [b'R', b'I', b'F', b'F']
+  file.append(le32(4 + 8 + size + size % 2))
+  file.append([b'W', b'E', b'B', b'P', b'V', b'P', b'8', b'L'])
+  file.append(le32(size))
+  for b in payload {
+    file.push(b)
+  }
+  if size % 2 == 1 {
+    file.push(b'\x00')
+  }
+  Bytes::from_array(file)
+}
+
+///|
 /// A 1x1 VP8L payload whose entropy image uses only group `groups - 1`, so
 /// that the other groups are coded but never used. dwebp decodes it to one
 /// transparent black pixel.
@@ -249,22 +269,8 @@ test "only the Huffman groups the entropy image uses are kept" {
 
 ///|
 test "an image with unused Huffman groups decodes like dwebp" {
-  let payload = sparse_groups_payload(1024)
-  let size = payload.length()
-  let le32 = fn(v : Int32) -> Array[Byte] {
-    [v.to_byte(), (v >> 8).to_byte(), (v >> 16).to_byte(), (v >> 24).to_byte()]
-  }
-  let file : Array[Byte] = [b'R', b'I', b'F', b'F']
-  file.append(le32(4 + 8 + size + size % 2))
-  file.append([b'W', b'E', b'B', b'P', b'V', b'P', b'8', b'L'])
-  file.append(le32(size))
-  for b in payload {
-    file.push(b)
-  }
-  if size % 2 == 1 {
-    file.push(b'\x00')
-  }
-  let image = decode_vp8l(Bytes::from_array(file))
+  let file = vp8l_file(sparse_groups_payload(1024))
+  let image = decode_vp8l(file)
   assert_eq(
     (image.width, image.height, image.data),
     (1, 1, b"\x00\x00\x00\x00"),
@@ -297,4 +303,27 @@ test "codes of unused groups are read without building a table" {
   )
   assert_eq(decoder.read_huffman_code(280).is_single_node(), false)
   assert_eq(decoder.read_huffman_code(280, keep=false).is_single_node(), true)
+}
+
+///|
+/// Expected pixels are from dwebp. The payloads have a simple green code with
+/// two symbols and single-symbol codes for red, blue, alpha and distance.
+test "simple codes assign the shorter code to the smaller symbol" {
+  // symbols 200 then 10; the one pixel reads code 0
+  let image = decode_vp8l(
+    vp8l_file(b"\x2f\x00\x00\x00\x00\x38\xb2\x42\x44\x04"),
+  )
+  assert_eq(image.data, b"\x00\x0a\x00\x00")
+}
+
+///|
+test "a simple code naming one symbol twice reads no bits" {
+  // symbols 7 then 7, nine pixels and no pixel bits
+  let image = decode_vp8l(
+    vp8l_file(b"\x2f\x08\x00\x00\x00\xf8\xc1\x41\x44\x04"),
+  )
+  assert_eq(image.width, 9)
+  for i in 0..<9 {
+    assert_eq(image.data[4 * i + 1], b'\x07')
+  }
 }
