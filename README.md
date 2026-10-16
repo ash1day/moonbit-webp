@@ -35,6 +35,15 @@ let image = @webp.decode(webp_bytes) catch {
 
 `data` holds `width * height * 4` bytes in RGBA order.
 
+`decode` reads the image size from the headers before allocating anything.
+Pass `max_pixels` to reject large images from untrusted input; the default,
+`MAX_PIXELS` (16384 x 16384), is the largest size the format allows, so a
+small file can still make `decode` allocate 1 GiB:
+
+```moonbit
+let image = @webp.decode(webp_bytes, max_pixels=4096 * 4096)
+```
+
 ## Packages
 
 | Package | Role |
