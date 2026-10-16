@@ -166,3 +166,107 @@ test "get_copy_distance refills the bit buffer" {
   let br = @bitreader.BitReader::new(b"\x05")
   assert_eq(get_copy_distance(br, 10), 32 + 5 + 1)
 }
+
+///|
+/// LSB-first bit writer for building VP8L streams in tests
+struct BitWriter {
+  bits : Array[Int32]
+}
+
+///|
+fn BitWriter::put(self : BitWriter, value : Int32, n : Int32) -> Unit {
+  for i in 0..<n {
+    self.bits.push((value >> i) & 1)
+  }
+}
+
+///|
+fn BitWriter::to_bytes(self : BitWriter) -> Bytes {
+  Bytes::makei((self.bits.length() + 7) / 8, fn(i) {
+    let mut b = 0
+    for k in 0..<8 {
+      if 8 * i + k < self.bits.length() {
+        b = b | (self.bits[8 * i + k] << k)
+      }
+    }
+    b.to_byte()
+  })
+}
+
+///|
+/// A simple Huffman code with a single symbol
+fn BitWriter::single_symbol_code(self : BitWriter, symbol : Int32) -> Unit {
+  self.put(1, 1)
+  self.put(0, 1)
+  if symbol < 2 {
+    self.put(0, 1)
+    self.put(symbol, 1)
+  } else {
+    self.put(1, 1)
+    self.put(symbol, 8)
+  }
+}
+
+///|
+/// A 1x1 VP8L payload whose entropy image uses only group `groups - 1`, so
+/// that the other groups are coded but never used. dwebp decodes it to one
+/// transparent black pixel.
+fn sparse_groups_payload(groups : Int32) -> Bytes {
+  let w = BitWriter::{ bits: [], }
+  w.put(0x2f, 8)
+  w.put(0, 14)
+  w.put(0, 14)
+  w.put(0, 1)
+  w.put(0, 3)
+  w.put(0, 1) // no transform
+  w.put(0, 1) // no color cache
+  w.put(1, 1) // entropy image
+  w.put(0, 3) // huffman bits 2
+  // entropy image: one pixel whose red and green hold the group index
+  w.put(0, 1)
+  let group = groups - 1
+  for symbol in [group & 0xff, group >> 8, 0, 0, 0] {
+    w.single_symbol_code(symbol)
+  }
+  for _ in 0..<groups {
+    for _ in 0..<5 {
+      w.single_symbol_code(0)
+    }
+  }
+  w.to_bytes()
+}
+
+///|
+test "only the Huffman groups the entropy image uses are kept" {
+  let br = @bitreader.BitReader::new(sparse_groups_payload(1024))
+  let (width, height) = read_header(br)
+  let decoder = LosslessDecoder::new(br, width, height)
+  ignore(decoder.read_transforms())
+  ignore(decoder.read_color_cache())
+  let info = decoder.read_huffman_codes(true, width, height, None)
+  assert_eq(info.huffman_code_groups.length(), 1)
+}
+
+///|
+test "an image with unused Huffman groups decodes like dwebp" {
+  let payload = sparse_groups_payload(1024)
+  let size = payload.length()
+  let le32 = fn(v : Int32) -> Array[Byte] {
+    [v.to_byte(), (v >> 8).to_byte(), (v >> 16).to_byte(), (v >> 24).to_byte()]
+  }
+  let file : Array[Byte] = [b'R', b'I', b'F', b'F']
+  file.append(le32(4 + 8 + size + size % 2))
+  file.append([b'W', b'E', b'B', b'P', b'V', b'P', b'8', b'L'])
+  file.append(le32(size))
+  for b in payload {
+    file.push(b)
+  }
+  if size % 2 == 1 {
+    file.push(b'\x00')
+  }
+  let image = decode_vp8l(Bytes::from_array(file))
+  assert_eq(
+    (image.width, image.height, image.data),
+    (1, 1, b"\x00\x00\x00\x00"),
+  )
+}

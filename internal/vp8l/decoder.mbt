@@ -196,8 +196,28 @@ fn LosslessDecoder::read_huffman_codes(
       entropy_image[i] = meta_huff_code
     }
   }
-  let hufftree_groups : Array[FixedArray[@huffman.HuffmanTree]] = []
-  for _i = 0; _i < num_huff_groups; _i = _i + 1 {
+  // Like libwebp, keep only the groups the entropy image refers to, renumbered
+  // in order of first use. Unused groups are still read from the bitstream
+  // but dropped, so a tiny image cannot make the decoder hold 65536 groups.
+  let mapping = FixedArray::make(num_huff_groups, -1)
+  let mut num_used = 0
+  if entropy_image.length() == 0 {
+    mapping[0] = 0
+    num_used = 1
+  }
+  for i = 0; i < entropy_image.length(); i = i + 1 {
+    let group = entropy_image[i]
+    if mapping[group] < 0 {
+      mapping[group] = num_used
+      num_used += 1
+    }
+    entropy_image[i] = mapping[group]
+  }
+  let hufftree_groups : Array[FixedArray[@huffman.HuffmanTree]] = Array::make(
+    num_used,
+    [],
+  )
+  for i = 0; i < num_huff_groups; i = i + 1 {
     let group = FixedArray::make(
       huffman_codes_per_meta_code,
       @huffman.HuffmanTree::build_single(0),
@@ -212,7 +232,9 @@ fn LosslessDecoder::read_huffman_codes(
       }
       group[j] = self.read_huffman_code(alpha_size)
     }
-    hufftree_groups.push(group)
+    if mapping[i] >= 0 {
+      hufftree_groups[mapping[i]] = group
+    }
   }
   let huffman_mask = if huffman_bits == 0 {
     0x7FFF_FFFF
