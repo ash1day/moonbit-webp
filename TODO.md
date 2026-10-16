@@ -46,5 +46,6 @@
 - [x] `NOTICE` に libwebp (BSD-3-Clause) と image-webp (MIT) の表示
 - [x] `DecodeError` を `Invalid` / `Unsupported` / `TooLarge` に分け、`Show` を実装
 - [x] `pkg.generated.mbti` をコミット、CI（`--deny-warn`、fmt、mbti の差分、4 ターゲットのテスト）
-- [ ] CI が GitHub 上で通ることを確認（push 後）
+- [x] CI が GitHub 上で通ることを確認
+- [x] Codex のレビュー指摘: 使われない Huffman グループを保持しない（1x1 画像で 65536 グループの表を確保させられた）、RIFF ヘッダーのサイズを超えるチャンクを拒否する（どちらも libwebp と同じ）
 - [ ] `ImageData` を他の MoonBit 画像ライブラリと相互運用しやすくする（変換関数や PNG 書き出しの例）

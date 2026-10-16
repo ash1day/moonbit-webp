@@ -74,7 +74,7 @@ moon test --target all
 - The lossy building blocks (transforms, predictors, loop filters,
   upsampling) are compared with values produced by libwebp's C functions
 - Every truncation and many single-byte corruptions of several files must
-  raise `DecodeError` instead of crashing
+  either decode or raise `DecodeError`; none may crash
 - CI runs the tests on all four backends
 
 Decoding the 24-megapixel `testdata/lossy-extra/bryce.webp` takes about
