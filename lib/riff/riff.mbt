@@ -46,12 +46,12 @@ pub fn parse(data : Bytes) -> WebPFile? {
     return None
   }
   // Check RIFF magic
-  if not(match_fourcc(data, 0, b"RIFF")) {
+  if !match_fourcc(data, 0, b"RIFF") {
     return None
   }
   let file_size = read_u32_le(data, 4)
   // Check WEBP signature
-  if not(match_fourcc(data, 8, b"WEBP")) {
+  if !match_fourcc(data, 8, b"WEBP") {
     return None
   }
   // Parse chunks starting at offset 12

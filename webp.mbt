@@ -91,7 +91,9 @@ fn check_simple_format(file : @riff.WebPFile) -> Unit raise DecodeError {
   match file.chunks {
     [] | [{ chunk_type: VP8 | VP8L, .. }, ..] => ()
     [{ chunk_type, .. }, ..] =>
-      raise DecodeError("\{chunk_type} chunk before the image without VP8X")
+      raise DecodeError(
+        "\{chunk_type.fourcc()} chunk before the image without VP8X",
+      )
   }
 }
 
@@ -160,7 +162,7 @@ fn find_alpha_chunk(
 ///|
 fn payload(webp_data : Bytes, chunk : @riff.Chunk) -> Bytes raise DecodeError {
   if chunk.size > webp_data.length() - chunk.offset {
-    raise DecodeError("\{chunk.chunk_type} chunk exceeds file size")
+    raise DecodeError("\{chunk.chunk_type.fourcc()} chunk exceeds file size")
   }
   Bytes::makei(chunk.size, fn(i) { webp_data[chunk.offset + i] })
 }

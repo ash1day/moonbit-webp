@@ -115,3 +115,10 @@ test "parse stops at a chunk of size Int32 max" {
   let file = parse(data).unwrap()
   assert_eq(file.chunks.length(), 1)
 }
+
+///|
+test "fourcc names chunk types" {
+  assert_eq(ChunkType::VP8.fourcc(), "VP8")
+  assert_eq(ChunkType::ALPH.fourcc(), "ALPH")
+  assert_eq(ChunkType::Unknown(b"abcd").fourcc(), "abcd")
+}
