@@ -85,7 +85,9 @@ test "chunk larger than the file raises DecodeError" {
      0x2f, // only the signature is present
   ]
   try decode_vp8l(data) |> ignore catch {
-    DecodeError(_) => ()
+    Invalid(_) => ()
+    Unsupported(_) => fail("expected Invalid")
+    TooLarge(_) => fail("expected Invalid")
   } noraise {
     _ => fail("expected DecodeError")
   }
@@ -102,7 +104,9 @@ test "chunk size near Int32 max raises DecodeError" {
      0x2f,
   ]
   try decode_vp8l(data) |> ignore catch {
-    DecodeError(_) => ()
+    Invalid(_) => ()
+    Unsupported(_) => fail("expected Invalid")
+    TooLarge(_) => fail("expected Invalid")
   } noraise {
     _ => fail("expected DecodeError")
   }

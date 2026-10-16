@@ -18,7 +18,7 @@ pub fn decode(
 ) -> ImageData raise DecodeError {
   let file = match @riff.parse(webp_data) {
     Some(f) => f
-    None => raise DecodeError("invalid RIFF/WebP header")
+    None => raise Invalid("invalid RIFF/WebP header")
   }
   let vp8x = match find_chunk(webp_data, file, VP8X) {
     Some(chunk) => Some(parse_vp8x(chunk))
@@ -28,7 +28,7 @@ pub fn decode(
     check_simple_format(file)
   }
   if vp8x is Some(header) && (header.flags & ANIMATION_FLAG) != 0 {
-    raise DecodeError("animated WebP is not supported")
+    raise Unsupported("animated WebP is not supported")
   }
   let (width, height, lossless) = match find_chunk(webp_data, file, VP8L) {
     Some(chunk) => {
@@ -41,19 +41,17 @@ pub fn decode(
           let (width, height) = @vp8.frame_size(chunk)
           (width, height, false)
         }
-        None => raise DecodeError("no VP8 or VP8L chunk found")
+        None => raise Invalid("no VP8 or VP8L chunk found")
       }
   }
   if vp8x is Some({ canvas_width, canvas_height, .. }) &&
     (canvas_width != width || canvas_height != height) {
-    raise DecodeError(
+    raise Invalid(
       "VP8X canvas size \{canvas_width}x\{canvas_height} does not match the image size \{width}x\{height}",
     )
   }
   if width * height > max_pixels {
-    raise DecodeError(
-      "image size \{width}x\{height} exceeds \{max_pixels} pixels",
-    )
+    raise TooLarge("image size \{width}x\{height} exceeds \{max_pixels} pixels")
   }
   if lossless {
     @vp8l.decode_vp8l(webp_data)
@@ -91,7 +89,7 @@ fn check_simple_format(file : @riff.WebPFile) -> Unit raise DecodeError {
   match file.chunks {
     [] | [{ chunk_type: VP8 | VP8L, .. }, ..] => ()
     [{ chunk_type, .. }, ..] =>
-      raise DecodeError(
+      raise Invalid(
         "\{chunk_type.fourcc()} chunk before the image without VP8X",
       )
   }
@@ -107,7 +105,7 @@ priv struct Vp8xHeader {
 ///|
 fn parse_vp8x(chunk : Bytes) -> Vp8xHeader raise DecodeError {
   if chunk.length() != 10 {
-    raise DecodeError("invalid VP8X chunk size: \{chunk.length()}")
+    raise Invalid("invalid VP8X chunk size: \{chunk.length()}")
   }
   {
     flags: chunk[0].to_int(),
@@ -162,7 +160,7 @@ fn find_alpha_chunk(
 ///|
 fn payload(webp_data : Bytes, chunk : @riff.Chunk) -> Bytes raise DecodeError {
   if chunk.size > webp_data.length() - chunk.offset {
-    raise DecodeError("\{chunk.chunk_type.fourcc()} chunk exceeds file size")
+    raise Invalid("\{chunk.chunk_type.fourcc()} chunk exceeds file size")
   }
   Bytes::makei(chunk.size, fn(i) { webp_data[chunk.offset + i] })
 }

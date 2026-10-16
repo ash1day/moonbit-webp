@@ -7,7 +7,7 @@ fn decode_alpha(
   height : Int32,
 ) -> FixedArray[Byte] raise DecodeError {
   if chunk.length() <= 1 {
-    raise DecodeError("ALPH chunk has no data")
+    raise Invalid("ALPH chunk has no data")
   }
   let header = chunk[0].to_int()
   let compression = header & 3
@@ -15,7 +15,7 @@ fn decode_alpha(
   let pre_processing = (header >> 4) & 3
   let reserved = header >> 6
   if compression > 1 || pre_processing > 1 || reserved != 0 {
-    raise DecodeError("invalid ALPH header: \{header}")
+    raise Invalid("invalid ALPH header: \{header}")
   }
   let payload = Bytes::makei(chunk.length() - 1, fn(i) { chunk[1 + i] })
   // filtered alpha values, one per pixel
@@ -24,7 +24,7 @@ fn decode_alpha(
     Bytes::makei(width * height, fn(i) { rgba[4 * i + 1] })
   } else {
     if payload.length() < width * height {
-      raise DecodeError("ALPH chunk too short for \{width}x\{height} pixels")
+      raise Invalid("ALPH chunk too short for \{width}x\{height} pixels")
     }
     payload
   }

@@ -112,18 +112,23 @@ test "decode dispatches simple lossy images to the VP8 decoder" {
 ///|
 fn check_error(webp_data : Bytes, message : String) -> Unit raise {
   try decode(webp_data) |> ignore catch {
-    DecodeError(m) => assert_eq(m, message)
+    Invalid(m) => assert_eq(m, message)
+    Unsupported(_) => fail("expected Invalid")
+    TooLarge(_) => fail("expected Invalid")
   } noraise {
     _ => fail("expected DecodeError(\{message})")
   }
 }
 
 ///|
-test "animated images raise DecodeError" {
-  check_error(
-    @fs.read_file_to_bytes("testdata/animated/random_lossy.webp"),
-    "animated WebP is not supported",
-  )
+test "animated images raise Unsupported" {
+  let data = @fs.read_file_to_bytes("testdata/animated/random_lossy.webp")
+  try decode(data) |> ignore catch {
+    Unsupported(m) => assert_eq(m, "animated WebP is not supported")
+    _ => fail("expected Unsupported")
+  } noraise {
+    _ => fail("expected Unsupported")
+  }
 }
 
 ///|
@@ -245,7 +250,9 @@ test "malformed lossless-compressed alpha raises DecodeError" {
     let alpha = Bytes::makei(64, fn(i) { if i == 0 { b'\x01' } else { fill } })
     let webp_data = with_alpha_chunk(alpha)
     try decode(webp_data) |> ignore catch {
-      DecodeError(_) => ()
+      Invalid(_) => ()
+      Unsupported(_) => fail("expected Invalid")
+      TooLarge(_) => fail("expected Invalid")
     } noraise {
       _ => fail("expected DecodeError for fill \{fill}")
     }
@@ -311,14 +318,15 @@ fn check_limit_error(
   message : String,
 ) -> Unit raise {
   try decode(webp_data, max_pixels~) |> ignore catch {
-    DecodeError(m) => assert_eq(m, message)
+    TooLarge(m) => assert_eq(m, message)
+    _ => fail("expected TooLarge")
   } noraise {
     _ => fail("expected DecodeError(\{message})")
   }
 }
 
 ///|
-test "lossy images larger than max_pixels raise DecodeError" {
+test "lossy images larger than max_pixels raise TooLarge" {
   let data = @fs.read_file_to_bytes(
     "testdata/alpha-extra/alpha_no_compression.webp",
   )
@@ -328,7 +336,7 @@ test "lossy images larger than max_pixels raise DecodeError" {
 }
 
 ///|
-test "lossless images larger than max_pixels raise DecodeError" {
+test "lossless images larger than max_pixels raise TooLarge" {
   let data = @fs.read_file_to_bytes("testdata/regression/tiny.webp")
   check_limit_error(data, 69, "image size 10x7 exceeds 69 pixels")
   let result = decode(data, max_pixels=70)

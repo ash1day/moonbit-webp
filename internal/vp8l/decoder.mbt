@@ -27,7 +27,7 @@ fn LosslessDecoder::new(
 ///|
 fn read_bits(br : @bitreader.BitReader, n : Int32) -> Int32 raise DecodeError {
   br.read_bits(n) catch {
-    @bitreader.BitReaderError(msg) => raise DecodeError(msg)
+    @bitreader.BitReaderError(msg) => raise Invalid(msg)
   }
 }
 
@@ -39,7 +39,7 @@ fn read_symbol(
   br : @bitreader.BitReader,
 ) -> Int32 raise DecodeError {
   tree.read_symbol(br) catch {
-    @bitreader.BitReaderError(msg) => raise DecodeError(msg)
+    @bitreader.BitReaderError(msg) => raise Invalid(msg)
   }
 }
 
@@ -50,7 +50,7 @@ fn build_huffman(
   code_lengths : FixedArray[Int32],
 ) -> @huffman.HuffmanTree raise DecodeError {
   @huffman.HuffmanTree::build_implicit(code_lengths) catch {
-    @huffman.HuffmanError(msg) => raise DecodeError(msg)
+    @huffman.HuffmanError(msg) => raise Invalid(msg)
   }
 }
 
@@ -62,7 +62,7 @@ fn LosslessDecoder::read_transforms(
   while read_bits(self.br, 1) == 1 {
     let transform_type_val = read_bits(self.br, 2)
     if self.transforms[transform_type_val] is Some(_) {
-      raise DecodeError("duplicate transform type")
+      raise Invalid("duplicate transform type")
     }
     self.transform_order.push(transform_type_val)
     let transform = match transform_type_val {
@@ -119,7 +119,7 @@ fn LosslessDecoder::read_transforms(
           data=color_map,
         )
       }
-      _ => raise DecodeError("invalid transform type")
+      _ => raise Invalid("invalid transform type")
     }
     self.transforms[transform_type_val] = Some(transform)
   }
@@ -159,7 +159,7 @@ fn LosslessDecoder::read_color_cache(
   if read_bits(self.br, 1) == 1 {
     let code_bits = read_bits(self.br, 4)
     if code_bits < 1 || code_bits > 11 {
-      raise DecodeError("invalid color cache bits: \{code_bits}")
+      raise Invalid("invalid color cache bits: \{code_bits}")
     }
     Some(code_bits)
   } else {
@@ -240,14 +240,14 @@ fn LosslessDecoder::read_huffman_code(
     let is_first_8bits = read_bits(self.br, 1)
     let zero_symbol = read_bits(self.br, 1 + 7 * is_first_8bits)
     if zero_symbol >= alphabet_size {
-      raise DecodeError("simple huffman symbol out of range")
+      raise Invalid("simple huffman symbol out of range")
     }
     if num_symbols == 1 {
       @huffman.HuffmanTree::build_single(zero_symbol)
     } else {
       let one_symbol = read_bits(self.br, 8)
       if one_symbol >= alphabet_size {
-        raise DecodeError("simple huffman symbol out of range")
+        raise Invalid("simple huffman symbol out of range")
       }
       @huffman.HuffmanTree::build_two(zero_symbol, one_symbol)
     }
@@ -278,7 +278,7 @@ fn LosslessDecoder::read_huffman_code_lengths(
     let length_nbits = 2 + 2 * read_bits(self.br, 3)
     let max_minus_two = read_bits(self.br, length_nbits)
     if max_minus_two > num_symbols - 2 {
-      raise DecodeError("max_symbol too large")
+      raise Invalid("max_symbol too large")
     }
     2 + max_minus_two
   } else {
@@ -307,16 +307,16 @@ fn LosslessDecoder::read_huffman_code_lengths(
         0 => 2
         1 => 3
         2 => 7
-        _ => raise DecodeError("invalid code length code")
+        _ => raise Invalid("invalid code length code")
       }
       let repeat_offset = match slot {
         0 | 1 => 3
         2 => 11
-        _ => raise DecodeError("invalid code length code")
+        _ => raise Invalid("invalid code length code")
       }
       let mut repeat = read_bits(self.br, extra_bits) + repeat_offset
       if symbol + repeat > num_symbols {
-        raise DecodeError("code length repeat overflow")
+        raise Invalid("code length repeat overflow")
       }
       let length = if use_prev { prev_code_len } else { 0 }
       while repeat > 0 {
@@ -425,7 +425,7 @@ fn LosslessDecoder::decode_image_data(
       let dist_code = get_copy_distance(self.br, dist_symbol)
       let distance = plane_code_to_distance(width, dist_code)
       if index < distance || num_values - index < length {
-        raise DecodeError("backward reference out of bounds")
+        raise Invalid("backward reference out of bounds")
       }
       if distance == 1 {
         let src = (index - distance) * 4
@@ -455,7 +455,7 @@ fn LosslessDecoder::decode_image_data(
     } else {
       let cc = match huffman_info.color_cache {
         Some(cc) => cc
-        None => raise DecodeError("color cache code without color cache")
+        None => raise Invalid("color cache code without color cache")
       }
       let cache_index = code - 280
       let argb = cc.data[cache_index]

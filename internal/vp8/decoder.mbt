@@ -777,12 +777,12 @@ fn Decoder::decode_frame(self : Decoder) -> Unit raise @image.DecodeError {
         self.f_inner[i] = block.is_i4x4 || !skip
       }
       if token_br.eof {
-        raise @image.DecodeError("premature end of VP8 data")
+        raise @image.Invalid("premature end of VP8 data")
       }
       self.reconstruct(mb_x, mb_y, block)
     }
     if self.br.eof {
-      raise @image.DecodeError("premature end of VP8 partition 0")
+      raise @image.Invalid("premature end of VP8 partition 0")
     }
   }
   if self.filter_type > 0 {

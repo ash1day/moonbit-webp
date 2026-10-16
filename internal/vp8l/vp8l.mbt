@@ -2,7 +2,7 @@
 pub fn decode_vp8l(webp_data : Bytes) -> ImageData raise DecodeError {
   let file = match @riff.parse(webp_data) {
     Some(f) => f
-    None => raise DecodeError("invalid RIFF/WebP header")
+    None => raise Invalid("invalid RIFF/WebP header")
   }
   // Find VP8L chunk
   let mut vp8l_chunk : @riff.Chunk? = None
@@ -14,10 +14,10 @@ pub fn decode_vp8l(webp_data : Bytes) -> ImageData raise DecodeError {
   }
   let chunk = match vp8l_chunk {
     Some(c) => c
-    None => raise DecodeError("no VP8L chunk found")
+    None => raise Invalid("no VP8L chunk found")
   }
   if chunk.size > webp_data.length() - chunk.offset {
-    raise DecodeError("VP8L chunk exceeds file size")
+    raise Invalid("VP8L chunk exceeds file size")
   }
   let chunk_data = Bytes::makei(chunk.size, fn(i) {
     webp_data[chunk.offset + i]
@@ -39,14 +39,14 @@ pub fn image_size(chunk : Bytes) -> (Int32, Int32) raise DecodeError {
 fn read_header(br : @bitreader.BitReader) -> (Int32, Int32) raise DecodeError {
   let signature = read_bits(br, 8)
   if signature != 0x2F {
-    raise DecodeError("invalid VP8L signature: \{signature}")
+    raise Invalid("invalid VP8L signature: \{signature}")
   }
   let width = read_bits(br, 14) + 1
   let height = read_bits(br, 14) + 1
   let _alpha_used = read_bits(br, 1)
   let version = read_bits(br, 3)
   if version != 0 {
-    raise DecodeError("invalid VP8L version: \{version}")
+    raise Invalid("invalid VP8L version: \{version}")
   }
   (width, height)
 }
