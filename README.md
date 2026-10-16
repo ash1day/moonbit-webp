@@ -1,8 +1,8 @@
 # moonbit-webp
 
 A WebP decoder written in pure MoonBit. It decodes lossless (VP8L), lossy
-(VP8) and lossy-with-alpha images to RGBA, and produces exactly the same
-pixels as libwebp's `dwebp`.
+(VP8) and lossy-with-alpha images to RGBA. On every test image it produces
+exactly the same pixels as libwebp's `dwebp`.
 
 Because it has no C dependency, it runs on every MoonBit backend: wasm-gc,
 wasm, JavaScript and native.
@@ -78,11 +78,12 @@ moon test --target all
   upsampling) are compared with values produced by libwebp's C functions
 - Every truncation and many single-byte corruptions of several files must
   either decode or raise `DecodeError`; none may crash
-- Outside the test suite, about 10,000 corrupted files were decoded by both
-  this library and libwebp, which agreed on every file except one: a corrupt
+- `tools/differential` decodes about 10,000 corrupted files with this library
+  and with libwebp's C code. They agree on every file except one: a corrupt
   ALPH stream whose last pixel reads past its end, which libwebp's 8-bit alpha
-  path accepts and this library rejects. libwebp's own SIMD and C builds can
-  also disagree on corrupt lossy data; this library follows the C build
+  path accepts and this library rejects. (libwebp's SIMD code can produce
+  other pixels than its C code on corrupt lossy data; this library follows
+  the C code.)
 - CI runs the tests on all four backends
 
 Decoding the 24-megapixel `testdata/lossy-extra/bryce.webp` takes about
