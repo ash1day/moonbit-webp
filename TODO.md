@@ -37,6 +37,14 @@
 - [x] VP8X のキャンバスサイズを、libwebp と同じくフレームヘッダーだけ読んでデコードの前に照合する
 - [ ] `decode` は RIFF を 1 回だけ解析するが、`decode_vp8` / `decode_vp8l` がファイル全体を受け取って解析し直し、チャンクもコピーしている
 - [ ] アニメーション（ANIM / ANMF）
+  - [x] ANMF の切り出し: フレーム数と各フレームの矩形（x, y, 幅, 高さ）を webpinfo と照合（`anim.mbt` の `parse_frames`。公開 API から呼ぶまで未使用の警告を `#warnings` で抑えている）
+  - [ ] ANMF のフィールド: 表示時間、dispose、blend
+  - [ ] ANMF の中のチャンク（ALPH と VP8 / VP8L）を取り出す
+  - [ ] フレームの矩形がキャンバスからはみ出したらエラー、ANMF が 16 バイト未満ならエラー
+  - [ ] ANIM: 背景色とループ回数。アニメーションのフラグがあるのに ANIM がなければエラー
+  - [ ] 各フレームを単独でデコードし、`webpmux -get frame n` + dwebp と照合
+  - [ ] 合成（blend / dispose）して libwebp の `anim_dump` と照合
+  - [ ] 公開 API（`decode` は 1 枚の画像を返すので、アニメーションは別の関数にする）
 - [ ] mooncakes.io への publish（2026-10-16 時点の判断: 今は公開しない。dry-run は成功済み）
 
 ## 公開の準備
