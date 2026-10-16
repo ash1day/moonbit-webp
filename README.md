@@ -78,6 +78,11 @@ moon test --target all
   upsampling) are compared with values produced by libwebp's C functions
 - Every truncation and many single-byte corruptions of several files must
   either decode or raise `DecodeError`; none may crash
+- Outside the test suite, about 10,000 corrupted files were decoded by both
+  this library and libwebp, which agreed on every file except one: a corrupt
+  ALPH stream whose last pixel reads past its end, which libwebp's 8-bit alpha
+  path accepts and this library rejects. libwebp's own SIMD and C builds can
+  also disagree on corrupt lossy data; this library follows the C build
 - CI runs the tests on all four backends
 
 Decoding the 24-megapixel `testdata/lossy-extra/bryce.webp` takes about
