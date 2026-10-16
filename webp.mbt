@@ -83,12 +83,10 @@ fn check_riff_size(
   file : @riff.WebPFile,
 ) -> Unit raise DecodeError {
   // the size field counts from byte 8; bytes after the RIFF data are ignored
-  let riff_end = if file.file_size >= 0 &&
-    file.file_size <= webp_data.length() - 8 {
-    file.file_size + 8
-  } else {
-    webp_data.length()
+  if file.file_size < 0 || file.file_size > webp_data.length() - 8 {
+    raise Invalid("file is shorter than the RIFF size")
   }
+  let riff_end = file.file_size + 8
   for chunk in file.chunks {
     if chunk.offset > riff_end || chunk.size > riff_end - chunk.offset {
       raise Invalid("\{chunk.chunk_type.fourcc()} chunk exceeds the RIFF size")

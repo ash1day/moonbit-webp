@@ -399,3 +399,12 @@ test "a RIFF size that ends before the image chunk is rejected" {
   })
   check_error(patched, "VP8 chunk exceeds the RIFF size")
 }
+
+///|
+test "a RIFF size larger than the file is rejected" {
+  // byte 5 raises the RIFF size from 0x148 to 0x248, beyond the 336-byte file
+  check_error(
+    patch("alpha-extra/alpha_no_compression", 5, b'\x02'),
+    "file is shorter than the RIFF size",
+  )
+}
