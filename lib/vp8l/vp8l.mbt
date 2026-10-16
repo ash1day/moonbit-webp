@@ -34,6 +34,28 @@ pub fn decode_vp8l(webp_data : Bytes) -> ImageData raise DecodeError {
   if version != 0 {
     raise DecodeError("invalid VP8L version: \{version}")
   }
+  let data = decode_image(br, width, height)
+  { width, height, data, }
+}
+
+///|
+/// Decodes a VP8L image stream that has no header, as stored in an ALPH
+/// chunk. Returns RGBA pixels; the alpha plane is the green channel.
+pub fn decode_image_stream(
+  data : Bytes,
+  width : Int32,
+  height : Int32,
+) -> Bytes raise DecodeError {
+  decode_image(@bitreader.BitReader::new(data), width, height)
+}
+
+///|
+/// Decodes the transforms and the entropy-coded image that follow the header
+fn decode_image(
+  br : @bitreader.BitReader,
+  width : Int32,
+  height : Int32,
+) -> Bytes raise DecodeError {
   let decoder = LosslessDecoder::new(br, width, height)
   let transformed_width = decoder.read_transforms()
   let transformed_size = transformed_width * height * 4
@@ -73,6 +95,5 @@ pub fn decode_vp8l(webp_data : Bytes) -> ImageData raise DecodeError {
       None => ()
     }
   }
-  let result = Bytes::makei(full_size, fn(i) { buf[i] })
-  { width, height, data: result, }
+  Bytes::makei(full_size, fn(i) { buf[i] })
 }
