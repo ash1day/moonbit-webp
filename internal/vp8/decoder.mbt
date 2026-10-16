@@ -427,7 +427,9 @@ fn Decoder::get_coeffs(
       (self.get_large_value(br, p), 2)
     }
     p = proba_index(t, kbands[n + 1], next_ctx)
-    out[off + kzigzag[n]] = br.get_signed(v) * (if n > 0 { ac_q } else { dc_q })
+    out[off + kzigzag[n]] = to_int16(
+      br.get_signed(v) * (if n > 0 { ac_q } else { dc_q }),
+    )
     n += 1
   }
   16

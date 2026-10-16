@@ -85,9 +85,15 @@ fn inverse_wht(dc : FixedArray[Int32], coeffs : FixedArray[Int32]) -> Unit {
     let a2 = tmp[1 + i * 4] - tmp[2 + i * 4]
     let a3 = dc0 - tmp[3 + i * 4]
     let out = i * 64
-    coeffs[out] = (a0 + a1) >> 3
-    coeffs[out + 16] = (a3 + a2) >> 3
-    coeffs[out + 32] = (a0 - a1) >> 3
-    coeffs[out + 48] = (a3 - a2) >> 3
+    coeffs[out] = to_int16((a0 + a1) >> 3)
+    coeffs[out + 16] = to_int16((a3 + a2) >> 3)
+    coeffs[out + 32] = to_int16((a0 - a1) >> 3)
+    coeffs[out + 48] = to_int16((a3 - a2) >> 3)
   }
+}
+
+///|
+/// libwebp keeps coefficients in int16_t, so larger values wrap around
+fn to_int16(v : Int32) -> Int32 {
+  v << 16 >> 16
 }

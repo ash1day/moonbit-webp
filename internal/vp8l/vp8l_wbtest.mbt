@@ -327,3 +327,38 @@ test "a simple code naming one symbol twice reads no bits" {
     assert_eq(image.data[4 * i + 1], b'\x07')
   }
 }
+
+///|
+/// A simple code with two 8-bit symbols
+fn simple_code_bits(first : Int32, second : Int32) -> Bytes {
+  let w = BitWriter::{ bits: [], }
+  w.put(1, 1) // simple
+  w.put(1, 1) // two symbols
+  w.put(1, 1) // 8-bit first symbol
+  w.put(first, 8)
+  w.put(second, 8)
+  w.to_bytes()
+}
+
+///|
+test "simple code symbols outside the alphabet are ignored like libwebp" {
+  // the distance alphabet has 40 symbols; 200 is dropped and 5 remains
+  let decoder = LosslessDecoder::new(
+    @bitreader.BitReader::new(simple_code_bits(5, 200)),
+    1,
+    1,
+  )
+  assert_eq(decoder.read_huffman_code(40).is_single_node(), true)
+  // with no symbol inside the alphabet there is no code at all
+  let decoder = LosslessDecoder::new(
+    @bitreader.BitReader::new(simple_code_bits(100, 200)),
+    1,
+    1,
+  )
+  try decoder.read_huffman_code(40) |> ignore catch {
+    Invalid(_) => ()
+    _ => fail("expected Invalid")
+  } noraise {
+    _ => fail("expected Invalid")
+  }
+}

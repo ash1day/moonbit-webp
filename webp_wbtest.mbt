@@ -436,3 +436,23 @@ test "image bitstreams run to the end of the file like in libwebp" {
     assert_eq(md5_hex(lossy.data), "cba741e37793437baee0be7d2497b183")
   }
 }
+
+///|
+test "a VP8 frame whose last partition has no data is rejected" {
+  // byte 66 is in the partition size table of this four-partition image;
+  // 0x80 makes the earlier partitions take all the data (dwebp:
+  // NOT_ENOUGH_DATA)
+  check_error(
+    patch("lossy-extra/small_31x13", 66, b'\x80'),
+    "no data for the last VP8 partition",
+  )
+}
+
+///|
+test "corrupt token data decodes like libwebp's 64-bit bool decoder" {
+  // Corrupting the first token byte drives the bool decoder's value above its
+  // range, where libwebp's 64-bit value refilled 7 bytes at a time decides the
+  // result. The expected value is from dwebp, with and without SIMD.
+  let image = decode(patch("lossy-extra/small_31x13", 74, b'\xff'))
+  assert_eq(md5_hex(image.data), "e4553c677897665eefcbf52adc49aa39")
+}

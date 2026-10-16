@@ -261,26 +261,23 @@ fn LosslessDecoder::read_huffman_code(
   if simple {
     let num_symbols = read_bits(self.br, 1) + 1
     let is_first_8bits = read_bits(self.br, 1)
-    let zero_symbol = read_bits(self.br, 1 + 7 * is_first_8bits)
-    if zero_symbol >= alphabet_size {
-      raise Invalid("simple huffman symbol out of range")
-    }
-    if num_symbols == 1 {
-      @huffman.HuffmanTree::build_single(zero_symbol)
+    let first = read_bits(self.br, 1 + 7 * is_first_8bits)
+    let second = if num_symbols == 2 { read_bits(self.br, 8) } else { first }
+    // Like libwebp, which sets a code length of 1 for each symbol and builds
+    // the code over the alphabet: symbols outside it are dropped, a symbol
+    // named twice reads no bits, and the smaller symbol gets code 0
+    let in_first = first < alphabet_size
+    let in_second = second < alphabet_size
+    if !in_first && !in_second {
+      raise Invalid("simple huffman code has no symbol in the alphabet")
+    } else if !in_second || first == second {
+      @huffman.HuffmanTree::build_single(first)
+    } else if !in_first {
+      @huffman.HuffmanTree::build_single(second)
+    } else if first < second {
+      @huffman.HuffmanTree::build_two(first, second)
     } else {
-      let one_symbol = read_bits(self.br, 8)
-      if one_symbol >= alphabet_size {
-        raise Invalid("simple huffman symbol out of range")
-      }
-      // Like code lengths of 1 for both symbols: the smaller symbol gets code
-      // 0, and a symbol named twice is a single-symbol code reading no bits
-      if zero_symbol == one_symbol {
-        @huffman.HuffmanTree::build_single(zero_symbol)
-      } else if zero_symbol < one_symbol {
-        @huffman.HuffmanTree::build_two(zero_symbol, one_symbol)
-      } else {
-        @huffman.HuffmanTree::build_two(one_symbol, zero_symbol)
-      }
+      @huffman.HuffmanTree::build_two(second, first)
     }
   } else {
     let code_length_code_lengths = FixedArray::make(code_length_codes, 0)

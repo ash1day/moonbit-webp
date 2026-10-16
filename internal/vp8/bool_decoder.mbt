@@ -1,12 +1,14 @@
 ///|
 /// Boolean entropy decoder (RFC 6386 section 7), ported from libwebp
-/// src/utils/bit_reader_utils.c so that `get_signed` behaves exactly like
-/// VP8GetSigned. Reading past the end of the data yields zero bits.
+/// src/utils/bit_reader_utils.c as built for 64-bit targets (BITS = 56). The
+/// value is kept in 64 bits and refilled 7 bytes at a time like libwebp, so
+/// that corrupt data, where the value outgrows the range, decodes the same.
+/// Reading past the end of the data yields zero bits.
 priv struct BoolDecoder {
   data : Bytes
   mut pos : Int32
-  mut value : Int32
-  mut range : Int32 // current range minus 1, in [126, 254]
+  mut value : UInt64
+  mut range : UInt32 // current range minus 1, in [126, 254] for valid data
   mut bits : Int32 // number of valid bits left in `value`
   mut eof : Bool
 }
@@ -19,10 +21,27 @@ fn BoolDecoder::new(data : Bytes) -> BoolDecoder {
 }
 
 ///|
+/// VP8LoadNewBytes: 56 bits at once while at least 8 bytes remain
 fn BoolDecoder::load_new_bytes(self : BoolDecoder) -> Unit {
+  if self.pos + 8 <= self.data.length() {
+    let mut bits : UInt64 = 0
+    for i in 0..<7 {
+      bits = (bits << 8) | self.data[self.pos + i].to_uint64()
+    }
+    self.pos += 7
+    self.value = bits | (self.value << 56)
+    self.bits += 56
+  } else {
+    self.load_final_bytes()
+  }
+}
+
+///|
+/// VP8LoadFinalBytes
+fn BoolDecoder::load_final_bytes(self : BoolDecoder) -> Unit {
   if self.pos < self.data.length() {
     self.bits += 8
-    self.value = self.data[self.pos].to_int() | (self.value << 8)
+    self.value = self.data[self.pos].to_uint64() | (self.value << 8)
     self.pos += 1
   } else if !self.eof {
     self.value = self.value << 8
@@ -34,7 +53,7 @@ fn BoolDecoder::load_new_bytes(self : BoolDecoder) -> Unit {
 }
 
 ///|
-fn log2_floor(v : Int32) -> Int32 {
+fn log2_floor(v : UInt32) -> Int32 {
   let mut n = 0
   let mut x = v
   while x > 1 {
@@ -52,12 +71,13 @@ fn BoolDecoder::read_bool(self : BoolDecoder, prob : Int32) -> Bool {
     self.load_new_bytes()
   }
   let pos = self.bits
-  let split = (range * prob) >> 8
-  let value = self.value >> pos
+  let split = (range * prob.reinterpret_as_uint()) >> 8
+  // range_t is 32 bits wide
+  let value = (self.value >> pos).to_uint()
   let bit = value > split
   if bit {
     range -= split
-    self.value -= (split + 1) << pos
+    self.value -= (split + 1).to_uint64() << pos
   } else {
     range = split + 1
   }
@@ -76,11 +96,11 @@ fn BoolDecoder::get_signed(self : BoolDecoder, v : Int32) -> Int32 {
   }
   let pos = self.bits
   let split = self.range >> 1
-  let value = self.value >> pos
-  let mask = (split - value) >> 31 // -1 or 0
+  let value = (self.value >> pos).to_uint()
+  let mask = (split - value).reinterpret_as_int() >> 31 // -1 or 0
   self.bits -= 1
-  self.range = (self.range + mask) | 1
-  self.value -= ((split + 1) & mask) << pos
+  self.range = (self.range + mask.reinterpret_as_uint()) | 1
+  self.value -= ((split + 1) & mask.reinterpret_as_uint()).to_uint64() << pos
   (v ^ mask) - mask
 }
 

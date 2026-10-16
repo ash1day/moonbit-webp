@@ -180,6 +180,10 @@ fn parse_frame_header(
     part_start += psize
     size_left -= psize
   }
+  if size_left <= 0 {
+    // ParsePartitions: the last partition must start before the end
+    raise @image.Invalid("no data for the last VP8 partition")
+  }
   partitions.push(BoolDecoder::new(slice(chunk, part_start, size_left)))
   // quantizer indices
   let base_q = br.read_literal(7)

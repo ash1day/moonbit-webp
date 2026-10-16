@@ -38,3 +38,13 @@ test "inverse WHT writes the DC of each 4x4 block like libwebp" {
     77, 66, 132, 113, 152, 140, 183, 213, 119, 139, 175, 178, 69, 37, 92, 113,
   ])
 }
+
+///|
+/// libwebp's TransformWHT_C writes int16_t: 16 DCs of 32767 sum to 65534 after
+/// the shift, which wraps to -2 (value from the C function)
+test "inverse WHT output wraps to 16 bits like libwebp" {
+  let dc = FixedArray::make(16, 32767)
+  let coeffs = FixedArray::make(256, 0)
+  inverse_wht(dc, coeffs)
+  assert_eq(coeffs[0], -2)
+}
