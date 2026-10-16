@@ -19,9 +19,9 @@ Then import `ash1day/webp` in your package's `moon.pkg`.
 
 ```moonbit
 let image = @webp.decode(webp_bytes) catch {
-  // Match the constructors without the package prefix:
-  // `DecodeError` is re-exported from `ash1day/webp/image`, so
-  // `@webp.Invalid(message)` does not resolve
+  // Write the constructors without a prefix, or as
+  // `@webp.DecodeError::Invalid(message)`. `@webp.Invalid(message)` does not
+  // resolve because `DecodeError` is re-exported from `ash1day/webp/image`
   Invalid(message) => abort("corrupt file: \{message}")
   Unsupported(message) => abort("not supported: \{message}")
   TooLarge(message) => abort(message)
@@ -38,7 +38,7 @@ message such as `invalid WebP: bad VP8 start code`.
 `decode` reads the image size from the headers and checks it before it
 allocates any pixel buffer. By default it accepts any size the format allows
 (16384 x 16384), which lets a file of a few bytes make `decode` allocate
-several gigabytes. Set `max_pixels` when the input comes from outside:
+about 1.5 GB. Set `max_pixels` when the input comes from outside:
 
 ```moonbit
 let image = @webp.decode(webp_bytes, max_pixels=4096 * 4096)
@@ -82,8 +82,8 @@ Decoding the 24-megapixel `testdata/lossy-extra/bryce.webp` takes about
 
 ## Packages
 
-Only the root package is public. The decoders live under `internal/` and
-cannot be imported from other modules.
+Only the root package and `image` are public. The decoders live under
+`internal/` and cannot be imported from other modules.
 
 | Package | Role |
 |---------|------|
@@ -99,4 +99,4 @@ Apache-2.0. The decoders are ported from
 [libwebp](https://chromium.googlesource.com/webm/libwebp) (BSD-3-Clause) and
 [image-webp](https://github.com/image-rs/image-webp) (MIT or Apache-2.0); see
 [NOTICE](NOTICE). Test images are credited in
-[testdata/CREDITS.md](testdata/CREDITS.md).
+[testdata/CREDITS.md](https://github.com/ash1day/moonbit-webp/blob/main/testdata/CREDITS.md).
