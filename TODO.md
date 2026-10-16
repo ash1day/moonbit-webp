@@ -47,5 +47,5 @@
 - [x] `DecodeError` を `Invalid` / `Unsupported` / `TooLarge` に分け、`Show` を実装
 - [x] `pkg.generated.mbti` をコミット、CI（`--deny-warn`、fmt、mbti の差分、4 ターゲットのテスト）
 - [x] CI が GitHub 上で通ることを確認
-- [x] Codex のレビュー指摘: 使われない Huffman グループを保持しない（1x1 画像で 65536 グループの表を確保させられた）、RIFF ヘッダーのサイズを超えるチャンクを拒否する（どちらも libwebp と同じ）
+- [x] Codex のレビュー指摘: 使われない Huffman グループを保持しない（1x1 画像で 65536 グループの表を確保させられた）、RIFF ヘッダーのサイズを超えるチャンクを拒否する（どちらも libwebp と同じ）。再検証の指摘: 使われないグループの符号は検証だけして表を作らない（1.7 MB の入力で JS 13 秒 → 0.1 秒）、二次テーブルを倍々に伸ばす、RIFF サイズより短いファイルを拒否する
 - [ ] `ImageData` を他の MoonBit 画像ライブラリと相互運用しやすくする（変換関数や PNG 書き出しの例）
