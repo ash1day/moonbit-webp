@@ -499,6 +499,9 @@ fn LosslessDecoder::decode_image_data(
       data[index * 4 + 1] = (argb >> 8).to_byte()
       data[index * 4 + 2] = argb.to_byte()
       data[index * 4 + 3] = (argb >> 24).to_byte()
+      // libwebp inserts every pixel, so a never-written slot (0) read here
+      // overwrites slot 0
+      color_cache_insert(cc, data, index * 4)
       index += 1
     }
   }

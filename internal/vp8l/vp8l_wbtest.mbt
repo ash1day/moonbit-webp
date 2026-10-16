@@ -362,3 +362,17 @@ test "simple code symbols outside the alphabet are ignored like libwebp" {
     _ => fail("expected Invalid")
   }
 }
+
+///|
+test "a pixel read from the color cache is inserted into the cache" {
+  // 3x1 with a 2-entry cache. The opaque black first pixel hashes to slot 0.
+  // The second pixel reads slot 1, which was never written: libwebp inserts
+  // that transparent black at slot 0, so the third pixel, read from slot 0,
+  // is transparent too. Expected pixels are from dwebp -pam.
+  let image = decode_vp8l(
+    vp8l_file(
+      b"\x2f\x02\x00\x00\x00\x06\x21\x41\xc2\xff\xff\x41\x23\xfa\x1f\x0e",
+    ),
+  )
+  assert_eq(image.data, b"\x00\x00\x00\xff\x00\x00\x00\x00\x00\x00\x00\x00")
+}
