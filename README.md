@@ -121,19 +121,23 @@ moon test --target all
   upsampling) are compared with values produced by libwebp's C functions
 - Every truncation and many single-byte corruptions of several files must
   either decode or raise `DecodeError`; none may crash
-- `tools/differential` decodes about 50,000 corrupted and truncated files
-  with this library and with libwebp's C code. They agree on all but three,
-  all of the same kind: a corrupt or truncated ALPH stream whose last code
-  reads past its end, which libwebp's 8-bit alpha path accepts and this
-  library rejects. This covers the kinds of damage the tool generates
-  (single-byte changes, random changes to lossy token data, truncation);
-  files built by hand in other ways have shown other differences, each fixed
-  when found. (libwebp's SIMD code can produce other pixels than its C code
-  on corrupt lossy data; this library follows the C code.)
+- `tools/differential` decodes about 50,000 corrupted and truncated still
+  images, and about 50,000 corrupted and truncated animations, with this
+  library and with libwebp's C code (`dwebp`, and `WebPAnimDecoder` through
+  `tools/anim_oracle`). The native and JavaScript builds give the same
+  results. They agree with libwebp on all but a handful of files, all of the
+  same kind: a corrupt or truncated ALPH stream whose last code reads past
+  its end, which libwebp's 8-bit alpha path accepts and this library
+  rejects. This covers the kinds of damage the tool generates (single-byte
+  changes, random changes to lossy token data, truncation); files built by
+  hand in other ways have shown other differences, each fixed when found.
+  (libwebp's SIMD code can produce other pixels than its C code on corrupt
+  lossy data; this library follows the C code.)
 - CI runs the tests on all four backends
 
-Decoding the 24-megapixel `testdata/lossy-extra/bryce.webp` takes about
-0.9 s on native and 2.2 s on wasm-gc.
+Decoding the 24-megapixel `testdata/lossy-extra/bryce.webp` (and taking the
+MD5 of the output) takes about 0.7 s on native, 1.8 s on wasm-gc and 1.9 s
+on Node.js.
 
 ## Packages
 
