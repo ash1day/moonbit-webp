@@ -45,7 +45,7 @@
     - フレームの幅と高さは ANMF のヘッダーではなくビットストリームの値を使う（libwebp の SetFrameInfo が上書きする）。ビットストリームは入力の末尾ではなく画像チャンク（パディング込み）の末尾まで
   - [x] ANMF の切り出し: フレーム数と各フレームの矩形（x, y, 幅, 高さ）を webpinfo と照合（`anim.mbt` の `parse_frames`。公開 API から呼ぶまで未使用の警告を `#warnings` で抑えている）
   - [x] ANMF のフィールド: 表示時間、dispose、blend
-  - [ ] `riff.parse` の走査を `parse_chunks` に切り出し、ANMF の中のチャンク（ALPH と VP8 / VP8L）を取り出す
+  - [x] `riff.parse` の走査を `parse_chunks` に切り出し、ANMF の中のチャンク（ALPH と VP8 / VP8L）を取り出す
   - [ ] フレームの矩形がキャンバスからはみ出したらエラー（ANMF が 16 バイト未満ならエラーは済み）
   - [ ] ANIM: 背景色とループ回数。アニメーションのフラグがあるのに ANIM がなければエラー
   - [ ] 上の demux 規則

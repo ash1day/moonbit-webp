@@ -53,3 +53,17 @@ test "parse_frames reads the duration, dispose and blend of each frame" {
   })
   assert_eq(frames, [(100, false, true), (80, false, true), (60, true, false)])
 }
+
+///|
+test "parse_frames finds the ALPH and image chunks of each frame" {
+  // sizes are the ones webpinfo prints, minus the 8-byte chunk header
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/offsets.webp")
+  let frames = parse_frames(data, animation_chunks(data)).map(f => {
+    (f.alpha.map(c => c.size), f.image.chunk_type.fourcc(), f.image.size)
+  })
+  assert_eq(frames, [
+    (None, "VP8L", 1540),
+    (None, "VP8", 80),
+    (Some(26), "VP8", 40),
+  ])
+}
