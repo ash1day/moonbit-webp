@@ -274,3 +274,17 @@ test "a frame without an image raises DecodeError" {
     "animation frame without an image",
   )
 }
+
+///|
+test "undefined VP8X flags in an animation raise DecodeError" {
+  // libwebp's demuxer accepts only the ICC, alpha, EXIF, XMP and animation
+  // bits; tools/anim_oracle prints "error" for each of these files
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/offsets.webp")
+  let flags = data[20].to_int()
+  for bit in [0x01, 0x40, 0x80] {
+    check_animation_error(
+      with_byte(data, 20, (flags | bit).to_byte()),
+      "invalid VP8X flags: \{flags | bit}",
+    )
+  }
+}

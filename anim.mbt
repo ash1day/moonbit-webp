@@ -129,6 +129,10 @@ fn parse_animation(webp_data : Bytes) -> Animation raise DecodeError {
     raise Invalid("animated WebP without VP8X")
   }
   let header = parse_vp8x(payload(webp_data, vp8x))
+  // ICC, alpha, EXIF, XMP and animation (libwebp's ALL_VALID_FLAGS)
+  if (header.flags | 0x3e) != 0x3e {
+    raise Invalid("invalid VP8X flags: \{header.flags}")
+  }
   let mut anim = None
   for chunk in chunks {
     match chunk.chunk_type {
