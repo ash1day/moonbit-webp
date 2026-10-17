@@ -147,6 +147,9 @@ fn parse_animation(webp_data : Bytes) -> Animation raise DecodeError {
     None => (0, 0xffffffffU)
   }
   let frames = parse_frames(webp_data, chunks)
+  if frames.is_empty() {
+    raise Invalid("animation without frames")
+  }
   // offsets and sizes are at most 25 bits, so the sums cannot overflow
   for i, f in frames {
     if f.x + f.width > header.canvas_width ||

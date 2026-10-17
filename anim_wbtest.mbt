@@ -251,3 +251,26 @@ test "a frame with ALPH before VP8L or after its image raises DecodeError" {
     "ALPH chunk after the image in frame 2",
   )
 }
+
+///|
+test "an animation without frames raises DecodeError" {
+  // tools/anim_oracle prints "error" for this file
+  let (vp8x, anim, _) = offsets_parts()
+  check_animation_error(
+    build_webp([("VP8X", vp8x), ("ANIM", anim)]),
+    "animation without frames",
+  )
+}
+
+///|
+test "a frame without an image raises DecodeError" {
+  // tools/anim_oracle prints "error" for both files
+  check_animation_error(
+    offsets_with_frame(0, []),
+    "animation frame without an image",
+  )
+  check_animation_error(
+    offsets_with_frame(2, []),
+    "animation frame without an image",
+  )
+}
