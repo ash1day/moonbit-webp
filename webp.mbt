@@ -33,19 +33,15 @@ pub fn decode(
   if vp8x is Some(header) && (header.flags & ANIMATION_FLAG) != 0 {
     raise Unsupported("animated WebP is not supported")
   }
-  let (width, height, lossless) = match find_chunk(webp_data, file, VP8L) {
-    Some(chunk) => {
-      let (width, height) = @vp8l.image_size(chunk)
-      (width, height, true)
-    }
-    None =>
-      match find_chunk(webp_data, file, VP8) {
-        Some(chunk) => {
-          let (width, height) = @vp8.frame_size(chunk)
-          (width, height, false)
-        }
-        None => raise Invalid("no VP8 or VP8L chunk found")
-      }
+  // the RIFF parser stops after the image chunk
+  guard file.chunks.last() is Some({ chunk_type: VP8 | VP8L, .. } as image) else {
+    raise Invalid("no VP8 or VP8L chunk found")
+  }
+  let lossless = image.chunk_type is VP8L
+  let (width, height) = if lossless {
+    @vp8l.image_size(payload(webp_data, image))
+  } else {
+    @vp8.frame_size(payload(webp_data, image))
   }
   if vp8x is Some({ canvas_width, canvas_height, .. }) &&
     (canvas_width != width || canvas_height != height) {
@@ -56,25 +52,18 @@ pub fn decode(
   if width * height > max_pixels {
     raise TooLarge("image size \{width}x\{height} exceeds \{max_pixels} pixels")
   }
+  // like libwebp, the bitstream runs to the end of the input, not of the chunk
+  let bitstream = Bytes::makei(webp_data.length() - image.offset, fn(i) {
+    webp_data[image.offset + i]
+  })
   if lossless {
-    @vp8l.decode_vp8l(webp_data)
+    @vp8l.decode_bitstream(bitstream)
   } else {
-    decode_lossy(webp_data, file, width, height)
-  }
-}
-
-///|
-/// Decodes the VP8 image and applies the ALPH chunk if there is one
-fn decode_lossy(
-  webp_data : Bytes,
-  file : @riff.WebPFile,
-  width : Int32,
-  height : Int32,
-) -> ImageData raise DecodeError {
-  match find_alpha_chunk(webp_data, file) {
-    Some(chunk) =>
-      @vp8.decode_vp8(webp_data, alpha=decode_alpha(chunk, width, height))
-    None => @vp8.decode_vp8(webp_data)
+    let alpha = match find_alpha_chunk(webp_data, file) {
+      Some(chunk) => Some(decode_alpha(chunk, width, height))
+      None => None
+    }
+    @vp8.decode_bitstream(bitstream, alpha?)
   }
 }
 
@@ -136,21 +125,6 @@ fn read_le24(data : Bytes, pos : Int32) -> Int32 {
   data[pos].to_int() |
   (data[pos + 1].to_int() << 8) |
   (data[pos + 2].to_int() << 16)
-}
-
-///|
-/// Returns the payload of the first chunk of the given type
-fn find_chunk(
-  webp_data : Bytes,
-  file : @riff.WebPFile,
-  chunk_type : @riff.ChunkType,
-) -> Bytes? raise DecodeError {
-  for chunk in file.chunks {
-    if chunk.chunk_type == chunk_type {
-      return Some(payload(webp_data, chunk))
-    }
-  }
-  None
 }
 
 ///|

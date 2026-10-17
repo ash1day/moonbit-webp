@@ -35,7 +35,7 @@
   - 簡易ファジング: alpha 5 ファイルの切り詰めと 1 バイト書き換え（約 36,000 通り）で panic なし
 - [x] ALPH チャンクは libwebp と同じく VP8 より前の最後の 1 つを使い、VP8 より後ろは無視する。VP8X がないときは最初のチャンクが VP8 / VP8L でなければエラー（dwebp で確認）
 - [x] VP8X のキャンバスサイズを、libwebp と同じくフレームヘッダーだけ読んでデコードの前に照合する
-- [ ] `decode` は RIFF を 1 回だけ解析するが、`decode_vp8` / `decode_vp8l` がファイル全体を受け取って解析し直し、チャンクもコピーしている
+- [x] `decode` は RIFF を 1 回だけ解析するが、`decode_vp8` / `decode_vp8l` がファイル全体を受け取って解析し直し、チャンクもコピーしている。ビットストリームを受け取る `decode_bitstream` を切り出し、`decode` はそちらを呼ぶ（圧縮データのコピーは 1 回残る。画素のバッファに比べて小さい）
 - [ ] アニメーション（ANIM / ANMF）。正解は libwebp の `WebPAnimDecoder`（`tools/anim_oracle`）。`anim_dump` は透明な画素の色を 0 にしてから書き出すので使わない
   - 設計
     - 公開 API: `decode` とは別に、`AnimationDecoder::new(webp_data, max_pixels?)` と、合成済みのキャンバス全体（RGBA、premultiply なし、毎回コピー）と時刻を 1 フレームずつ返す `next_frame()`。全フレームを配列で返すとメモリがキャンバス × フレーム数になり `max_pixels` で抑えられない。libwebp と同じく ANIM の背景色は合成に使わず（透明な黒で始める）、値だけ返す

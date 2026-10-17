@@ -6,6 +6,8 @@ import {
 }
 
 // Values
+pub fn decode_bitstream(Bytes) -> @image.ImageData raise @image.DecodeError
+
 pub fn decode_image_stream(Bytes, Int, Int) -> Bytes raise @image.DecodeError
 
 pub fn decode_vp8l(Bytes) -> @image.ImageData raise @image.DecodeError

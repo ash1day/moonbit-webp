@@ -5,7 +5,18 @@ pub fn decode_vp8(
   webp_data : Bytes,
   alpha? : FixedArray[Byte],
 ) -> @image.ImageData raise @image.DecodeError {
-  let (hdr, br) = parse_frame_header(find_vp8_chunk(webp_data))
+  decode_bitstream(find_vp8_chunk(webp_data), alpha?)
+}
+
+///|
+/// Decodes a VP8 bitstream: the payload of a VP8 chunk and whatever input
+/// follows it, up to where the caller says the bitstream ends. `alpha`, one
+/// value per pixel, replaces the opaque alpha channel when given.
+pub fn decode_bitstream(
+  bitstream : Bytes,
+  alpha? : FixedArray[Byte],
+) -> @image.ImageData raise @image.DecodeError {
+  let (hdr, br) = parse_frame_header(bitstream)
   let dec = Decoder::new(hdr, br)
   dec.decode_frame()
   let rgba = yuv_to_rgba(
