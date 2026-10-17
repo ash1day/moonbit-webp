@@ -20,12 +20,12 @@
 
 ## lossy 対応
 
-- [x] VP8 (lossy) デコーダ（`lib/vp8`、libwebp と bit-exact）
+- [x] VP8 (lossy) デコーダ（`internal/vp8`、libwebp と bit-exact）
   - ブール符号デコーダ、ヘッダー、モードと係数、逆 DCT/WHT、イントラ予測、ループフィルター、fancy upsampling
   - 部品ごとに libwebp の C 関数を切り出したオラクルと照合
   - lossy-extra 10 枚（bryce を含む）、lossy/ 5 枚、regression/dark を dwebp と照合
   - 簡易ファジング: 3 ファイルの切り詰めと 1 バイト書き換え（約 2,700 通り）で panic なし
-- [x] `ImageData` / `DecodeError` を `lib/image` に移す（`lib/vp8l` とルートは `pub using` で再公開）
+- [x] `ImageData` / `DecodeError` を `image/` に移す（ルートは `pub using` で再公開）
 - [ ] テスト画像に無いヘッダー値: `ref_lf_delta` / `mode_lf_delta` が 0 以外、segment の `absolute_delta = 0`（libwebp のエンコーダは出力しない）。sharpness 3 と 6 は cwebp で作った画像で dwebp と一致を確認済み（リポジトリには未追加）
 - [x] lossy のデコードが約 15 バイト/画素かかっていた（bryce で 350 MB）。Y/U/V 平面を `Byte` にし、RGBA を `Bytes` にコピーせず、alpha をその場で書き込んで約 6 バイト/画素（146 MB）にした
 - [x] ALPH チャンク（圧縮なし / VP8L 圧縮、フィルター 0〜3）
@@ -66,5 +66,5 @@
   - [x] 8 バイト未満の VP8L ストリーム（ALPH 経由）を、libwebp はゼロで 64 ビットまで読める。こちらはエラー
   - [x] 差分テストに切り詰めのケースを足す。`robustness_wbtest` の切り詰めは RIFF サイズを残すのでデコーダ内部の EOF まで届かない。VP8 / VP8L / ALPH の中身を切り詰めてサイズを合わせたケースを両方に足した。差分テストは 50,676 件で差 3 件、3 件とも libwebp の 8 ビット経路（下の「残る差」）
   - [x] riff: 2 GiB 近い入力で `pos + 8` が溢れる
-- [ ] 残る差: 壊れた ALPH で最後の画素が末尾を越えて読む場合、libwebp の 8 ビット経路（color indexing だけ、color cache なし、R/B/A が 1 記号）は受け入れるが、こちらはエラーにする
+- [ ] 残る差（直さない方針）: 壊れた ALPH や切り詰めた ALPH で最後の符号が末尾を越えて読む場合、libwebp の 8 ビット経路（color indexing だけ、color cache なし、R/B/A が 1 記号）は最後の画素まで書ければ受け入れるが、こちらはエラーにする。libwebp は末尾を越えた読みで 64 ビットの窓を巡回して読むので、合わせるにはビットリーダーを libwebp と同じ作りにする必要がある
 - [ ] `ImageData` を他の MoonBit 画像ライブラリと相互運用しやすくする（変換関数や PNG 書き出しの例）

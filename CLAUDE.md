@@ -26,6 +26,8 @@ moon check --deny-warn
 ```
 webp.mbt          # decode（VP8X、振り分け、上限の照合）
 alpha.mbt         # ALPH チャンク
+anim.mbt          # アニメーション（ANIM / ANMF）
+robustness_wbtest.mbt  # 切り詰めと 1 バイト書き換えで落ちないこと
 image/            # ImageData / DecodeError
 internal/
   riff/           # RIFF コンテナパーサ
@@ -35,4 +37,5 @@ internal/
   vp8l/           # VP8L (lossless) デコーダ
   vp8/            # VP8 (lossy) デコーダ
 testdata/         # テスト画像（.moonignore でパッケージから除外）
+tools/differential/  # 壊れたファイルを libwebp と比べる差分テスト（run.py）
 ```

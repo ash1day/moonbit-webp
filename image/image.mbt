@@ -4,8 +4,8 @@
 pub(all) suberror DecodeError {
   /// The data is not a valid WebP file (truncated, corrupt or inconsistent)
   Invalid(String)
-  /// The file is valid but uses a feature this decoder does not implement,
-  /// such as animation
+  /// The file uses a feature this decoder does not implement, such as
+  /// animation. The rest of the file is not necessarily checked.
   Unsupported(String)
   /// The image has more pixels than the `max_pixels` limit allows
   TooLarge(String)
