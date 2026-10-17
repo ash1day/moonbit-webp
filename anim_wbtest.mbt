@@ -404,3 +404,24 @@ test "a canvas of 2^32 pixels or more raises DecodeError" {
     "canvas is too large: 65536x65536",
   )
 }
+
+///|
+test "extra ANIM chunks and unknown chunks in frames are ignored" {
+  // tools/anim_oracle decodes all three files like the original
+  let (_, anim, frames) = offsets_parts()
+  let other_anim = Bytes::makei(6, fn(i) {
+    if i == 4 {
+      b'\x07'
+    } else {
+      anim[i]
+    }
+  })
+  let second = parse_animation(offsets_with([("ANIM", other_anim)], 2))
+  assert_eq((second.loop_count, second.frames.length()), (3, 3))
+  let after = parse_animation(offsets_with([("ANIM", other_anim)], 5))
+  assert_eq((after.loop_count, after.frames.length()), (3, 3))
+  let junk = parse_animation(
+    offsets_with_frame(0, frames[0].1 + [("JUNK", b"ab")]),
+  )
+  assert_eq(junk.frames.length(), 3)
+}
