@@ -20,11 +20,25 @@ test "multiple reads crossing byte boundary" {
 
 ///|
 test "read past end raises error" {
+  let br = BitReader::new(b"\x6A\x01\x02\x03\x04\x05\x06\x07\x08")
+  assert_eq(br.read_bits(3), 2) // 010
+  assert_eq(br.read_bits(5), 13) // 01101
+  assert_eq(br.read_bits(32), 0x04030201)
+  assert_eq(br.read_bits(32), 0x08070605)
+  // no more bits, should error
+  let result = br.read_bits(4) catch { _ => -1 }
+  assert_eq(result, -1)
+}
+
+///|
+test "a stream shorter than 8 bytes reads zeros up to 64 bits" {
+  // libwebp's VP8LInitBitReader loads the stream into a zeroed 64-bit window
   let br = BitReader::new(b"\x6A")
   assert_eq(br.read_bits(3), 2) // 010
   assert_eq(br.read_bits(5), 13) // 01101
-  // no more bits, should error
-  let result = br.read_bits(4) catch { _ => -1 }
+  assert_eq(br.read_bits(28), 0)
+  assert_eq(br.read_bits(28), 0)
+  let result = br.read_bits(1) catch { _ => -1 }
   assert_eq(result, -1)
 }
 

@@ -12,7 +12,14 @@ pub(all) struct BitReader {
 }
 
 ///|
+/// Like libwebp's VP8LInitBitReader, which loads up to 8 bytes into a zeroed
+/// 64-bit window, a stream shorter than 8 bytes reads as if padded with zeros
 pub fn BitReader::new(data : Bytes) -> BitReader {
+  let data = if data.length() < 8 {
+    Bytes::makei(8, fn(i) { if i < data.length() { data[i] } else { b'\x00' } })
+  } else {
+    data
+  }
   { data, buffer: 0L, nbits: 0, byte_pos: 0, }
 }
 

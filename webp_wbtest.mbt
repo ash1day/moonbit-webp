@@ -521,3 +521,23 @@ test "a first partition as long as the VP8 chunk raises DecodeError" {
     "VP8 partition length 35 is not shorter than the chunk size 35",
   )
 }
+
+///|
+test "a VP8L alpha stream shorter than 8 bytes is read as if padded with zeros" {
+  // A 2x2 image whose 5-byte ALPH stream needs bits past its end. libwebp's
+  // VP8LInitBitReader loads up to 8 bytes and leaves the rest zero, so dwebp
+  // decodes it; the MD5 is from dwebp -pam.
+  let data : Array[Bytes] = [
+    b"\x52\x49\x46\x46\x50\x00\x00\x00\x57\x45\x42\x50\x56\x50\x38\x58", b"\x0a\x00\x00\x00\x10\x00\x00\x00\x01\x00\x00\x01\x00\x00\x41\x4c",
+    b"\x50\x48\x06\x00\x00\x00\x01\x98\x80\x09\x88\x88\x56\x50\x38\x20", b"\x24\x00\x00\x00\x90\x01\x00\x9d\x01\x2a\x02\x00\x02\x00\x02\xc0",
+    b"\x4c\x25\xa0\x02\x74\x00\xc4\xe6\x26\x00\xfc\x16\x13\xfa\xc7\xf1", b"\xbf\xe6\xbf\xd0\xa0\x6c\xb0\x00",
+  ]
+  let buf = Buffer()
+  for part in data {
+    buf.write_bytes(part)
+  }
+  let result = decode(buf.to_bytes()) catch {
+    e => fail("expected the image, got \{e}")
+  }
+  assert_eq(md5_hex(result.data), "383c9090fc102f86572e1651f614b415")
+}
