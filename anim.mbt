@@ -39,55 +39,69 @@ fn parse_frames(
   chunks : Array[@riff.Chunk],
 ) -> Array[AnimFrame] raise DecodeError {
   let frames = []
-  for i, chunk in chunks {
-    if chunk.chunk_type is ANMF {
-      if chunk.size < 16 {
-        raise Invalid("ANMF chunk is shorter than 16 bytes: \{chunk.size}")
+  let mut i = 0
+  while i < chunks.length() {
+    let chunk = chunks[i]
+    i += 1
+    match chunk.chunk_type {
+      ANMF => {
+        if chunk.size < 16 {
+          raise Invalid("ANMF chunk is shorter than 16 bytes: \{chunk.size}")
+        }
+        if chunk.offset > webp_data.length() - 16 {
+          raise Invalid("ANMF chunk exceeds file size")
+        }
+        // only the frame header; the frame's chunks follow it
+        let anmf = Bytes::makei(16, fn(j) { webp_data[chunk.offset + j] })
+        let (alpha, image, next) = frame_chunks(chunks, i)
+        i = next
+        // offsets are stored divided by 2, sizes minus 1
+        frames.push({
+          x: read_le24(anmf, 0) * 2,
+          y: read_le24(anmf, 3) * 2,
+          width: read_le24(anmf, 6) + 1,
+          height: read_le24(anmf, 9) + 1,
+          duration: read_le24(anmf, 12),
+          dispose_to_background: (anmf[15].to_int() & 1) != 0,
+          blend: (anmf[15].to_int() & 2) == 0,
+          alpha,
+          image,
+        })
       }
-      if chunk.offset > webp_data.length() - 16 {
-        raise Invalid("ANMF chunk exceeds file size")
-      }
-      // only the frame header; the frame's chunks follow it
-      let anmf = Bytes::makei(16, fn(j) { webp_data[chunk.offset + j] })
-      let (alpha, image) = frame_chunks(chunks, i + 1)
-      // offsets are stored divided by 2, sizes minus 1
-      frames.push({
-        x: read_le24(anmf, 0) * 2,
-        y: read_le24(anmf, 3) * 2,
-        width: read_le24(anmf, 6) + 1,
-        height: read_le24(anmf, 9) + 1,
-        duration: read_le24(anmf, 12),
-        dispose_to_background: (anmf[15].to_int() & 1) != 0,
-        blend: (anmf[15].to_int() & 2) == 0,
-        alpha,
-        image,
-      })
+      // libwebp's demuxer: every image of an animation is in an ANMF chunk
+      ALPH | VP8 | VP8L =>
+        raise Invalid(
+          "\{chunk.chunk_type.fourcc()} chunk outside the frames of an animation",
+        )
+      _ => ()
     }
   }
   frames
 }
 
 ///|
-/// The ALPH and image chunks of the frame whose chunks start at `start`. Like
-/// libwebp's StoreFrame, takes at most one of each and stops at any other
-/// chunk.
+/// The ALPH and image chunks of the frame whose chunks start at `start`, and
+/// the index after them. Like libwebp's StoreFrame, takes at most one of each
+/// and stops at any other chunk.
 fn frame_chunks(
   chunks : Array[@riff.Chunk],
   start : Int32,
-) -> (@riff.Chunk?, @riff.Chunk) raise DecodeError {
+) -> (@riff.Chunk?, @riff.Chunk, Int32) raise DecodeError {
   let mut alpha = None
   let mut image = None
-  for chunk in chunks[start:] {
-    match (chunk.chunk_type, alpha, image) {
-      (ALPH, None, _) => alpha = Some(chunk)
-      (VP8 | VP8L, _, None) => image = Some(chunk)
+  let mut next = start
+  while next < chunks.length() {
+    match (chunks[next].chunk_type, alpha, image) {
+      (ALPH, None, _) => alpha = Some(chunks[next])
+      (VP8 | VP8L, _, None) => image = Some(chunks[next])
       _ => break
     }
+    next += 1
   }
   guard image is Some(image) else {
     raise Invalid("animation frame without an image")
   }
-  (alpha, image)
+  (alpha, image, next)
 }
 
 ///|
@@ -150,7 +164,8 @@ fn parse_animation(webp_data : Bytes) -> Animation raise DecodeError {
 /// The 6 bytes of an ANIM chunk. Like libwebp, a 5-byte chunk is read with
 /// its padding byte.
 fn read_anim(webp_data : Bytes, chunk : @riff.Chunk) -> Bytes raise DecodeError {
-  if chunk.size + chunk.size % 2 < 6 {
+  // with padding, shorter than 6 bytes
+  if chunk.size < 5 {
     raise Invalid("ANIM chunk is shorter than 6 bytes: \{chunk.size}")
   }
   if chunk.offset > webp_data.length() - 6 {

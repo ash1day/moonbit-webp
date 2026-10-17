@@ -190,3 +190,33 @@ test "an ANIM chunk shorter than 6 bytes with padding raises DecodeError" {
     "ANIM chunk is shorter than 6 bytes: 4",
   )
 }
+
+///|
+/// offsets.webp rebuilt from its parts, with `extra` chunks at `pos` among
+/// the top-level chunks (0 is before VP8X)
+fn offsets_with(extra : Array[(String, Bytes)], pos : Int32) -> Bytes raise {
+  let (vp8x, anim, frames) = offsets_parts()
+  let top = [("VP8X", vp8x), ("ANIM", anim)] + frames.map(f => anmf(f.0, f.1))
+  build_webp(top[:pos].to_owned() + extra + top[pos:].to_owned())
+}
+
+///|
+test "image chunks outside the frames of an animation raise DecodeError" {
+  // libwebp's demuxer requires every image of an animation to be in an ANMF
+  // chunk; tools/anim_oracle prints "error" for these files
+  let (_, _, frames) = offsets_parts()
+  let vp8 = frames[1].1[0]
+  let alph = frames[2].1[0]
+  check_animation_error(
+    offsets_with([vp8], 5),
+    "VP8 chunk outside the frames of an animation",
+  )
+  check_animation_error(
+    offsets_with([vp8], 2),
+    "VP8 chunk outside the frames of an animation",
+  )
+  check_animation_error(
+    offsets_with([alph], 5),
+    "ALPH chunk outside the frames of an animation",
+  )
+}
