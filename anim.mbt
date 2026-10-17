@@ -71,6 +71,13 @@ fn parse_frames(
         let anmf = Bytes::makei(16, fn(j) { webp_data[chunk.offset + j] })
         let (alpha, image, next) = frame_chunks(chunks, i, frames.length() + 1)
         i = next
+        let last = chunks[next - 1]
+        if last.offset + last.size + last.size % 2 >
+          chunk.offset + chunk.size + chunk.size % 2 {
+          raise Invalid(
+            "the chunks of frame \{frames.length() + 1} do not fit in its ANMF chunk",
+          )
+        }
         // offsets are stored divided by 2, sizes minus 1
         frames.push({
           x: read_le24(anmf, 0) * 2,

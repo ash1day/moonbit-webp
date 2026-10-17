@@ -338,3 +338,18 @@ test "the RIFF data of an animation must end at a chunk boundary" {
     3,
   )
 }
+
+///|
+test "the chunks of a frame must fit in its ANMF chunk" {
+  // The ANMF chunk of frame 2 holds 104 bytes; its size is at byte 1620.
+  // libwebp checks the frame's chunks against the padded ANMF size and
+  // otherwise ignores it: tools/anim_oracle prints "error" for 102 and
+  // decodes 103 and 106.
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/offsets.webp")
+  check_animation_error(
+    with_byte(data, 1620, b'\x66'),
+    "the chunks of frame 2 do not fit in its ANMF chunk",
+  )
+  assert_eq(parse_animation(with_byte(data, 1620, b'\x67')).frames.length(), 3)
+  assert_eq(parse_animation(with_byte(data, 1620, b'\x6a')).frames.length(), 3)
+}
