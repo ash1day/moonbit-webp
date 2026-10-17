@@ -12,14 +12,32 @@ priv struct AnimFrame {
 }
 
 ///|
+/// The chunks of an animated WebP file, including the ones inside ANMF chunks
+#warnings("-unused_value")
+fn animation_chunks(webp_data : Bytes) -> Array[@riff.Chunk] raise DecodeError {
+  guard @riff.parse(webp_data) is Some(file) else {
+    raise Invalid("invalid RIFF/WebP header")
+  }
+  let end = if file.file_size >= 0 && file.file_size < webp_data.length() - 8 {
+    file.file_size + 8
+  } else {
+    webp_data.length()
+  }
+  guard @riff.parse_chunks(webp_data, 12, end, frames=true) is Some(chunks) else {
+    raise Invalid("chunk size too large")
+  }
+  chunks
+}
+
+///|
 /// Reads the ANMF chunks of an animated WebP file, in order
 #warnings("-unused_value")
 fn parse_frames(
   webp_data : Bytes,
-  file : @riff.WebPFile,
+  chunks : Array[@riff.Chunk],
 ) -> Array[AnimFrame] raise DecodeError {
   let frames = []
-  for chunk in file.chunks {
+  for chunk in chunks {
     if chunk.chunk_type is ANMF {
       if chunk.size < 16 {
         raise Invalid("ANMF chunk is shorter than 16 bytes: \{chunk.size}")
