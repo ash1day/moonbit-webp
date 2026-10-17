@@ -542,3 +542,25 @@ test "a VP8L alpha stream shorter than 8 bytes is read as if padded with zeros" 
   }
   assert_eq(md5_hex(result.data), "383c9090fc102f86572e1651f614b415")
 }
+
+///|
+test "decode lossy headers that libwebp's encoder does not write" {
+  // made with a patched cwebp (testdata/lossy-crafted/encoder.patch):
+  // non-zero reference and mode loop filter deltas, segment values relative
+  // to the frame's (absolute_delta = 0), and sharpness 3, 5 and 6
+  check_file(
+    "lossy-crafted/lf_delta", 128, 128, "5c932d3f060182d8ab262b76c5572aec",
+  )
+  check_file(
+    "lossy-crafted/relative_segments", 128, 128, "a24d9d7e43e69d4e22068fef5d8415fd",
+  )
+  check_file(
+    "lossy-crafted/lf_delta_relative_sharpness5", 128, 128, "40f9cb8d436124462e16b283be6820c8",
+  )
+  check_file(
+    "lossy-crafted/sharpness3", 128, 128, "1578e8757844dfa4eb30f27128bc14d7",
+  )
+  check_file(
+    "lossy-crafted/sharpness6", 128, 128, "0d9e2197287bb580c4728f75ed20d4d2",
+  )
+}

@@ -42,3 +42,15 @@ Made for this repository from `lossy/1.webp` and `alpha-extra/alpha_filter_1.web
     -frame f7.webp +60+36+20+0+b -frame f8.webp +90+0+0+0+b \
     -loop 0 -bgcolor 128,0,255,0 -o blend.webp
   ```
+
+### lossy-crafted/
+Made for this repository from `lossy-extra/test.webp` (decoded with
+`dwebp -pam` to `src.pam`), to cover VP8 header values that libwebp's
+encoder never writes. `encoder.patch` changes `src/enc/syntax_enc.c` of
+libwebp 1.6.0 so that `WEBP_TEST_LF` writes non-zero reference and mode loop
+filter deltas and `WEBP_TEST_RELATIVE` writes segment values relative to the
+frame's (`absolute_delta = 0`).
+- lf_delta: `WEBP_TEST_LF=1 cwebp -q 60 -f 40 src.pam`
+- relative_segments: `WEBP_TEST_RELATIVE=1 cwebp -q 60 -f 40 src.pam`
+- lf_delta_relative_sharpness5: both variables, `cwebp -q 60 -f 40 -sharpness 5 src.pam`
+- sharpness3, sharpness6: unpatched `cwebp -q 60 -f 40 -sharpness 3` (and 6)

@@ -26,7 +26,7 @@
   - lossy-extra 10 枚（bryce を含む）、lossy/ 5 枚、regression/dark を dwebp と照合
   - 簡易ファジング: 3 ファイルの切り詰めと 1 バイト書き換え（約 2,700 通り）で panic なし
 - [x] `ImageData` / `DecodeError` を `image/` に移す（ルートは `pub using` で再公開）
-- [ ] テスト画像に無いヘッダー値: `ref_lf_delta` / `mode_lf_delta` が 0 以外、segment の `absolute_delta = 0`（libwebp のエンコーダは出力しない）。sharpness 3 と 6 は cwebp で作った画像で dwebp と一致を確認済み（リポジトリには未追加）
+- [x] テスト画像に無いヘッダー値: `ref_lf_delta` / `mode_lf_delta` が 0 以外、segment の `absolute_delta = 0`（libwebp のエンコーダは出力しない）。cwebp にパッチを当てて作った画像と sharpness 3 / 5 / 6 の画像を `testdata/lossy-crafted/` に追加し、dwebp と照合。それぞれの値を無視するように壊すとテストが落ちることを確認
 - [x] lossy のデコードが約 15 バイト/画素かかっていた（bryce で 350 MB）。Y/U/V 平面を `Byte` にし、RGBA を `Bytes` にコピーせず、alpha をその場で書き込んで約 6 バイト/画素（146 MB）にした
 - [x] ALPH チャンク（圧縮なし / VP8L 圧縮、フィルター 0〜3）
 - [x] VP8X コンテナ（チャンクサイズ、アニメーションの拒否、キャンバスと画像のサイズの一致）

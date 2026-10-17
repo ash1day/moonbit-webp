@@ -1,0 +1,52 @@
+--- a/src/enc/syntax_enc.c	2026-10-16 08:25:18
++++ b/src/enc/syntax_enc.c	2026-10-17 11:17:30
+@@ -12,6 +12,7 @@
+ // Author: Skal (pascal.massimino@gmail.com)
+ 
+ #include <assert.h>
++#include <stdlib.h>
+ #include <stddef.h>
+ 
+ #include "src/dec/common_dec.h"
+@@ -193,13 +194,15 @@
+     int s;
+     VP8PutBitUniform(bw, hdr->update_map);
+     if (VP8PutBitUniform(bw, update_data)) {
+-      // we always use absolute values, not relative ones
+-      VP8PutBitUniform(bw, 1);  // (segment_feature_mode = 1. Paragraph 9.3.)
++      // TEST: WEBP_TEST_RELATIVE writes the segment values relative to the
++      // frame's base quantizer and filter level (segment_feature_mode = 0)
++      const int relative = getenv("WEBP_TEST_RELATIVE") != NULL;
++      VP8PutBitUniform(bw, !relative);
+       for (s = 0; s < NUM_MB_SEGMENTS; ++s) {
+-        VP8PutSignedBits(bw, enc->dqm[s].quant, 7);
++        VP8PutSignedBits(bw, enc->dqm[s].quant - (relative ? enc->base_quant : 0), 7);
+       }
+       for (s = 0; s < NUM_MB_SEGMENTS; ++s) {
+-        VP8PutSignedBits(bw, enc->dqm[s].fstrength, 6);
++        VP8PutSignedBits(bw, enc->dqm[s].fstrength - (relative ? enc->filter_hdr.level : 0), 6);
+       }
+     }
+     if (hdr->update_map) {
+@@ -219,6 +222,21 @@
+   VP8PutBitUniform(bw, hdr->simple);
+   VP8PutBits(bw, hdr->level, 6);
+   VP8PutBits(bw, hdr->sharpness, 3);
++  if (getenv("WEBP_TEST_LF") != NULL) {
++    // TEST: every reference and mode delta, positive and negative
++    static const int ref[4] = {5, -3, 7, -9};
++    static const int mode[4] = {-6, 4, -2, 11};
++    int i;
++    VP8PutBitUniform(bw, 1);  // use_lf_delta
++    VP8PutBitUniform(bw, 1);  // update
++    for (i = 0; i < 4; ++i) {
++      VP8PutSignedBits(bw, ref[i], 6);  // writes the update flag too
++    }
++    for (i = 0; i < 4; ++i) {
++      VP8PutSignedBits(bw, mode[i], 6);  // writes the update flag too
++    }
++    return;
++  }
+   if (VP8PutBitUniform(bw, use_lf_delta)) {
+     // '0' is the default value for i4x4_lf_delta at frame #0.
+     const int need_update = (hdr->i4x4_lf_delta != 0);
