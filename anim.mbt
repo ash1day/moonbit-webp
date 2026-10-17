@@ -64,6 +64,7 @@ fn parse_frames(
         if chunk.size < 16 {
           raise Invalid("ANMF chunk is shorter than 16 bytes: \{chunk.size}")
         }
+        // animation_chunks already checked this; kept as a guard for reads
         if chunk.offset > webp_data.length() - 16 {
           raise Invalid("ANMF chunk exceeds file size")
         }
@@ -226,6 +227,7 @@ fn read_anim(webp_data : Bytes, chunk : @riff.Chunk) -> Bytes raise DecodeError 
   if chunk.size < 5 {
     raise Invalid("ANIM chunk is shorter than 6 bytes: \{chunk.size}")
   }
+  // animation_chunks already checked this; kept as a guard for reads
   if chunk.offset > webp_data.length() - 6 {
     raise Invalid("ANIM chunk exceeds file size")
   }
@@ -476,7 +478,8 @@ priv enum FrameSource {
 
 ///|
 /// Reads and checks the structure of a WebP file. Raises `TooLarge` when the
-/// canvas has more than `max_pixels` pixels.
+/// canvas has more than `max_pixels` pixels (so every file when it is 0 or
+/// less).
 ///
 /// Like libwebp's WebPAnimDecoder, a still image is an animation of one frame
 /// at time 0 that plays once. Its pixels and checks are those of `decode`

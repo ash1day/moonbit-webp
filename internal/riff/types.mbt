@@ -49,6 +49,9 @@ pub fn ChunkType::fourcc(self : ChunkType) -> String {
 }
 
 ///|
+/// The derived Eq and Debug methods are exported this way because the
+/// compiler warns (implicit_impl_as_method) without it, and CI denies
+/// warnings
 #deprecated
 pub extend ChunkType with Eq::{equal, not_equal}
 

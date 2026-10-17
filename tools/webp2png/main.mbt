@@ -3,7 +3,8 @@
 ///
 ///   webp2png in.webp out.png
 ///
-/// An animation is written as one PNG per frame: out.1.png, out.2.png, ...
+/// An animation of more than one frame is written as one PNG per frame:
+/// out.1.png, out.2.png, ...
 /// The PNG is not compressed, to keep this example free of dependencies.
 fn main {
   let args = @env.args()

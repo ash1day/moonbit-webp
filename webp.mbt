@@ -11,7 +11,8 @@ pub const MAX_PIXELS : Int32 = 16384 * 16384
 
 ///|
 /// Decodes a WebP file to RGBA. Images with more than `max_pixels` pixels
-/// raise `DecodeError` before any pixel buffer is allocated.
+/// (every image when it is 0 or less) raise `TooLarge` before any pixel
+/// buffer is allocated.
 pub fn decode(
   webp_data : Bytes,
   max_pixels~ : Int32 = MAX_PIXELS,
