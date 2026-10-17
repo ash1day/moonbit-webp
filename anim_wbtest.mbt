@@ -288,3 +288,10 @@ test "undefined VP8X flags in an animation raise DecodeError" {
     )
   }
 }
+
+///|
+test "a second VP8X chunk in an animation raises DecodeError" {
+  // tools/anim_oracle prints "error" for this file
+  let (vp8x, _, _) = offsets_parts()
+  check_animation_error(offsets_with([("VP8X", vp8x)], 5), "second VP8X chunk")
+}

@@ -134,8 +134,9 @@ fn parse_animation(webp_data : Bytes) -> Animation raise DecodeError {
     raise Invalid("invalid VP8X flags: \{header.flags}")
   }
   let mut anim = None
-  for chunk in chunks {
+  for chunk in chunks[1:] {
     match chunk.chunk_type {
+      VP8X => raise Invalid("second VP8X chunk")
       // libwebp uses the first ANIM chunk and ignores the others
       ANIM if anim is None => anim = Some(read_anim(webp_data, chunk))
       ANMF if anim is None => raise Invalid("ANMF chunk before the ANIM chunk")
