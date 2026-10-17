@@ -353,3 +353,17 @@ test "the chunks of a frame must fit in its ANMF chunk" {
   assert_eq(parse_animation(with_byte(data, 1620, b'\x67')).frames.length(), 3)
   assert_eq(parse_animation(with_byte(data, 1620, b'\x6a')).frames.length(), 3)
 }
+
+///|
+test "the size of a frame comes from its bitstream, not its ANMF header" {
+  // libwebp's SetFrameInfo replaces the ANMF size with the bitstream's.
+  // Frame 3 is 15x13 at (30, 20); its ANMF width - 1 is at byte 1742.
+  // tools/anim_oracle decodes both files like the original.
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/offsets.webp")
+  for width in [b'\x28', b'\x04'] {
+    let frames = parse_animation(with_byte(data, 1742, width)).frames catch {
+        e => fail("expected the frames, got \{e}")
+      }
+    assert_eq((frames[2].width, frames[2].height), (15, 13))
+  }
+}

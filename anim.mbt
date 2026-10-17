@@ -78,12 +78,14 @@ fn parse_frames(
             "the chunks of frame \{frames.length() + 1} do not fit in its ANMF chunk",
           )
         }
-        // offsets are stored divided by 2, sizes minus 1
+        // like libwebp's SetFrameInfo, the size comes from the bitstream
+        let (width, height) = image_size(webp_data, image)
+        // offsets are stored divided by 2
         frames.push({
           x: read_le24(anmf, 0) * 2,
           y: read_le24(anmf, 3) * 2,
-          width: read_le24(anmf, 6) + 1,
-          height: read_le24(anmf, 9) + 1,
+          width,
+          height,
           duration: read_le24(anmf, 12),
           dispose_to_background: (anmf[15].to_int() & 1) != 0,
           blend: (anmf[15].to_int() & 2) == 0,
@@ -208,4 +210,17 @@ fn read_anim(webp_data : Bytes, chunk : @riff.Chunk) -> Bytes raise DecodeError 
     raise Invalid("ANIM chunk exceeds file size")
   }
   Bytes::makei(6, fn(i) { webp_data[chunk.offset + i] })
+}
+
+///|
+/// The width and height in the header of a VP8 or VP8L chunk
+fn image_size(
+  webp_data : Bytes,
+  chunk : @riff.Chunk,
+) -> (Int32, Int32) raise DecodeError {
+  if chunk.chunk_type is VP8L {
+    @vp8l.image_size(payload(webp_data, chunk))
+  } else {
+    @vp8.frame_size(payload(webp_data, chunk))
+  }
 }
