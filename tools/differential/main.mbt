@@ -7,8 +7,10 @@
 /// with dwebp, or with tools/anim_oracle for animations.
 fn main {
   let args = @env.args()
-  let animation = args.length() > 1 && args[1] == "--animation"
-  for i in (if animation { 2 } else { 1 })..<args.length() {
+  // under Node the arguments start with node and the script
+  let first = if args.length() > 1 && args[1].has_suffix(".js") { 2 } else { 1 }
+  let animation = args.length() > first && args[first] == "--animation"
+  for i in (if animation { first + 1 } else { first })..<args.length() {
     let path = args[i]
     let result = try {
       let data = @fs.read_file_to_bytes(path)
