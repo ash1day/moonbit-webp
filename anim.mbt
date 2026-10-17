@@ -239,3 +239,27 @@ fn image_size(
     @vp8.frame_size(payload(webp_data, chunk))
   }
 }
+
+///|
+/// Decodes the image of one frame, at the frame's size
+#warnings("-unused_value")
+fn decode_frame(
+  webp_data : Bytes,
+  frame : AnimFrame,
+) -> ImageData raise DecodeError {
+  let image = frame.image
+  // unlike a still image, the bitstream ends with the chunk and its padding
+  let bitstream = Bytes::makei(image.size + image.size % 2, fn(i) {
+    webp_data[image.offset + i]
+  })
+  if image.chunk_type is VP8L {
+    @vp8l.decode_bitstream(bitstream)
+  } else {
+    let alpha = match frame.alpha {
+      Some(chunk) =>
+        Some(decode_alpha(payload(webp_data, chunk), frame.width, frame.height))
+      None => None
+    }
+    @vp8.decode_bitstream(bitstream, alpha?)
+  }
+}

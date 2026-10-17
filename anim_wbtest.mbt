@@ -425,3 +425,39 @@ test "extra ANIM chunks and unknown chunks in frames are ignored" {
   )
   assert_eq(junk.frames.length(), 3)
 }
+
+///|
+/// Checks each frame decoded on its own against the MD5 of the RGBA pixels
+/// that dwebp -pam writes for the frame extracted with webpmux -get frame
+fn check_frames(
+  path : String,
+  expected : Array[(Int32, Int32, String)],
+) -> Unit raise {
+  let data = @fs.read_file_to_bytes("testdata/\{path}.webp")
+  let animation = parse_animation(data)
+  let decoded = animation.frames.map(f => {
+    let image = decode_frame(data, f)
+    (image.width, image.height, md5_hex(image.data))
+  })
+  assert_eq((path, decoded), (path, expected))
+}
+
+///|
+test "each frame decodes like the frame extracted with webpmux" {
+  check_frames("animated-extra/offsets", [
+    (40, 30, "26269e3c54eb6c364ee35ee983db903f"),
+    (21, 17, "46de9d606be008f5c264cebfa3b51705"),
+    (15, 13, "f0b5534ed60d610d9c2ce4b069fc635a"),
+  ])
+  check_frames("animated/random_lossy", [
+    (99, 87, "e79794cc54b79b067ff8e76a259b67a8"),
+    (99, 87, "47d539f1e4dc679ed8d7f03fabbd326a"),
+    (99, 87, "ada5d26e8ce7d5f50d59648e54306bb7"),
+    (99, 87, "c5b92ab9ae350cf9199a4a36078d2c43"),
+  ])
+  check_frames("animated/random_lossless", [
+    (64, 63, "dca76dfb37bf0a05142d87ec0f32acce"),
+    (64, 63, "ed10889d93d7972db40cf74220faaf65"),
+    (64, 63, "4d23e9b3c872eb167add98919104c423"),
+  ])
+}
