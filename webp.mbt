@@ -20,9 +20,11 @@ pub fn decode(
     Some(f) => f
     None => raise Invalid("invalid RIFF/WebP header")
   }
-  let vp8x = match find_chunk(webp_data, file, VP8X) {
-    Some(chunk) => Some(parse_vp8x(chunk))
-    None => None
+  // like libwebp, only a VP8X right after "WEBP" makes the extended format
+  let vp8x = match file.chunks {
+    [{ chunk_type: VP8X, .. } as chunk, ..] =>
+      Some(parse_vp8x(payload(webp_data, chunk)))
+    _ => None
   }
   check_riff_size(webp_data, file)
   if vp8x is None {

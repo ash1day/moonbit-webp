@@ -456,3 +456,13 @@ test "corrupt token data decodes like libwebp's 64-bit bool decoder" {
   let image = decode(patch("lossy-extra/small_31x13", 74, b'\xff'))
   assert_eq(md5_hex(image.data), "e4553c677897665eefcbf52adc49aa39")
 }
+
+///|
+test "VP8X is read only from the first chunk" {
+  // libwebp's ParseVP8X looks only right after "WEBP"; dwebp rejects this
+  let (vp8x, _, vp8) = alpha_test_chunks()
+  check_error(
+    build_webp([("ICCP", b"abcd"), ("VP8X", vp8x), ("VP8 ", vp8)]),
+    "ICCP chunk before the image without VP8X",
+  )
+}

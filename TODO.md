@@ -60,7 +60,7 @@
 - [ ] レビュー（fable / astra、2026-10-16）で見つかった libwebp との差。どれも dwebp で再現済み
   - [x] `parse_frames` が 12 バイト未満の ANMF で範囲外を読み、12〜15 バイトでもフレームを返す。16 バイト未満はエラーにする
   - [x] VP8L: color cache から読んだ画素をキャッシュに書き戻さない。未書き込みのスロットを参照すると画素が変わる
-  - [ ] VP8X を先頭以外のチャンクからも拾う（libwebp は "WEBP" 直後だけ）
+  - [x] VP8X を先頭以外のチャンクからも拾う（libwebp は "WEBP" 直後だけ）
   - [ ] VP8X があるとき、RIFF サイズの検査にパディングを含めない（libwebp の ParseOptionalChunks は含める）
   - [ ] VP8 の先頭パーティション長を、宣言されたチャンクサイズと照合しない（libwebp の VP8GetInfo は `partition_length >= chunk_size` を拒否）
   - [ ] 8 バイト未満の VP8L ストリーム（ALPH 経由）を、libwebp はゼロで 64 ビットまで読める。こちらはエラー
