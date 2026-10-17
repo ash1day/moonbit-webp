@@ -12,6 +12,6 @@ repository = "https://github.com/ash1day/moonbit-webp"
 
 license = "Apache-2.0"
 
-keywords = [ "webp", "image", "codec", "decoder" ]
+keywords = [ "webp", "image", "codec", "decoder", "animation" ]
 
-description = "WebP decoder (lossless, lossy and alpha) in pure MoonBit"
+description = "WebP decoder (lossless, lossy, alpha and animation) in pure MoonBit"
