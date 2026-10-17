@@ -179,21 +179,14 @@ def compare_animations(out_dir, rng):
             with open(path, "wb") as f:
                 f.write(case)
             paths.append(path)
-    ours = {}
-    for i in range(0, len(paths), 300):
-        out = subprocess.run(
-            DECODER + ["--animation"] + paths[i : i + 300], capture_output=True, text=True
-        )
-        for line in out.stdout.splitlines():
-            path, _, result = line.rpartition(" ")
-            ours[path] = result
+    ours = run_decoder(["--animation"], paths)
     disagreements, skipped = [], 0
     for path in paths:
-        mine = ours.get(path)
-        if mine is not None and mine.startswith("ERR:TooLarge"):
+        mine = ours[path]
+        if mine.startswith("ERR:TooLarge"):
             skipped += 1
             continue
-        mine = "ERR" if mine is None or mine.startswith("ERR") else mine
+        mine = "ERR" if mine.startswith("ERR") else mine
         theirs = oracle_line(path)
         if theirs is None:
             skipped += 1
@@ -215,14 +208,32 @@ def dwebp_md5(path):
     return hashlib.md5(data[data.index(b"ENDHDR\n") + 7 :]).hexdigest()
 
 
-def our_md5s(paths):
+def run_decoder(args, paths):
+    """The decoder's result for each path. A crash is not a rejection: when a
+    batch exits abnormally, each file is run alone and the ones that crash
+    get "CRASH", which never matches libwebp."""
     results = {}
     for i in range(0, len(paths), 300):
-        out = subprocess.run(DECODER + paths[i : i + 300], capture_output=True, text=True)
+        batch = paths[i : i + 300]
+        out = subprocess.run(DECODER + args + batch, capture_output=True, text=True)
+        if out.returncode != 0:
+            for path in batch:
+                one = subprocess.run(DECODER + args + [path], capture_output=True, text=True)
+                line = one.stdout.strip()
+                ok = one.returncode == 0 and line.startswith(path + " ")
+                results[path] = line.rpartition(" ")[2] if ok else "CRASH"
+            continue
         for line in out.stdout.splitlines():
             path, _, result = line.rpartition(" ")
-            results[path] = "ERR" if result.startswith("ERR") else result
+            results[path] = result
+    for path in paths:
+        results.setdefault(path, "CRASH")
     return results
+
+
+def our_md5s(paths):
+    results = run_decoder([], paths)
+    return {p: "ERR" if r.startswith("ERR") else r for p, r in results.items()}
 
 
 def main():
