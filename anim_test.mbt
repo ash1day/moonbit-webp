@@ -77,3 +77,43 @@ test "AnimationDecoder returns a still image as one frame" {
   }
   assert_eq(frames, [(0, 0, "50c39d15a3ec7f4bec1fe39d3e720cb2")])
 }
+
+///|
+test "AnimationDecoder checks the canvas against max_pixels" {
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/offsets.webp")
+  try
+    @webp.AnimationDecoder::new(data, max_pixels=45 * 33 - 1) |> ignore
+  catch {
+    TooLarge(m) => assert_eq(m, "canvas size 45x33 exceeds 1484 pixels")
+    _ => fail("expected TooLarge")
+  } noraise {
+    _ => fail("expected TooLarge")
+  }
+  assert_eq(
+    @webp.AnimationDecoder::new(data, max_pixels=45 * 33).frame_count(),
+    3,
+  )
+  let still = @fs.read_file_to_bytes("testdata/lossy-extra/test.webp")
+  try
+    @webp.AnimationDecoder::new(still, max_pixels=128 * 128 - 1) |> ignore
+  catch {
+    TooLarge(_) => ()
+    _ => fail("expected TooLarge")
+  } noraise {
+    _ => fail("expected TooLarge")
+  }
+}
+
+///|
+test "frames returned by next_frame do not change afterwards" {
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/blend.webp")
+  let decoder = @webp.AnimationDecoder::new(data)
+  let images = []
+  while decoder.next_frame() is Some(frame) {
+    images.push(frame.image.data)
+  }
+  assert_eq(images.length(), 8)
+  assert_eq(md5_of(images[0]), "439ffb319c936c9768a4b07b7eea2c3a")
+  assert_eq(md5_of(images[6]), "24afee6af2b86be85322deecc15e4a6d")
+  assert_eq(decoder.next_frame() is None, true)
+}

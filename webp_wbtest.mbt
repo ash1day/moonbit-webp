@@ -124,7 +124,8 @@ fn check_error(webp_data : Bytes, message : String) -> Unit raise {
 test "animated images raise Unsupported" {
   let data = @fs.read_file_to_bytes("testdata/animated/random_lossy.webp")
   try decode(data) |> ignore catch {
-    Unsupported(m) => assert_eq(m, "animated WebP is not supported")
+    Unsupported(m) =>
+      assert_eq(m, "animated WebP; decode it with AnimationDecoder")
     _ => fail("expected Unsupported")
   } noraise {
     _ => fail("expected Unsupported")

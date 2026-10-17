@@ -62,7 +62,7 @@ fn read_still(
     check_simple_format(file)
   }
   if vp8x is Some(header) && (header.flags & ANIMATION_FLAG) != 0 {
-    raise Unsupported("animated WebP is not supported")
+    raise Unsupported("animated WebP; decode it with AnimationDecoder")
   }
   // the RIFF parser stops after the image chunk
   guard file.chunks.last() is Some({ chunk_type: VP8 | VP8L, .. } as image) else {
