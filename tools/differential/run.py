@@ -1,9 +1,15 @@
 """Differential test against libwebp's dwebp.
 
-Corrupts test images (every single-byte change of four kinds, plus random
-multi-byte changes inside the lossy token data), decodes each file with this
-library and with dwebp, and reports every file where they disagree: one
-accepts and the other rejects, or both accept with different pixels.
+Corrupts test images (every single-byte change of four kinds, random
+multi-byte changes inside the lossy token data, and truncations), decodes
+each file with this library and with dwebp, and reports every file where
+they disagree: one accepts and the other rejects, or both accept with
+different pixels.
+
+There are two kinds of truncation. Cutting the file keeps the sizes in the
+RIFF and chunk headers, so both decoders reject it at the container. Cutting
+the payload of a VP8, VP8L or ALPH chunk and fixing up those sizes reaches
+the end-of-stream handling inside the decoders.
 
 Usage (from the repository root):
 
@@ -47,6 +53,11 @@ TOKEN_FILES = [
     ("lossy/1", 150),
 ]
 
+TRUNCATED_FILES = SINGLE_BYTE_FILES + [name for name, _ in TOKEN_FILES]
+
+# at most this many truncation lengths per chunk; longer chunks are sampled
+MAX_TRUNCATIONS = 300
+
 DECODER = "_build/native/release/build/tools/differential/differential.exe"
 DWEBP = os.environ.get("DWEBP", "dwebp")
 
@@ -70,6 +81,39 @@ def token_cases(data, count, rng):
         for _ in range(rng.choice([1, 2, 3])):
             out[rng.randrange(tokens, len(data))] = rng.randrange(256)
         yield bytes(out)
+
+
+def chunks(data):
+    """The (fourcc, payload) pairs of a WebP file"""
+    out = []
+    pos = 12
+    while pos + 8 <= len(data):
+        size = int.from_bytes(data[pos + 4 : pos + 8], "little")
+        out.append((data[pos : pos + 4], data[pos + 8 : pos + 8 + size]))
+        pos += 8 + size + size % 2
+    return out
+
+
+def build(parts):
+    body = b"".join(
+        fourcc + len(payload).to_bytes(4, "little") + payload + b"\0" * (len(payload) % 2)
+        for fourcc, payload in parts
+    )
+    return b"RIFF" + (len(body) + 4).to_bytes(4, "little") + b"WEBP" + body
+
+
+def truncation_cases(data, rng):
+    for length in range(12, len(data)):
+        yield data[:length]
+    parts = chunks(data)
+    for k, (fourcc, payload) in enumerate(parts):
+        if fourcc not in (b"VP8 ", b"VP8L", b"ALPH"):
+            continue
+        lengths = range(len(payload))
+        if len(payload) > MAX_TRUNCATIONS:
+            lengths = sorted(rng.sample(lengths, MAX_TRUNCATIONS))
+        for length in lengths:
+            yield build(parts[:k] + [(fourcc, payload[:length])] + parts[k + 1 :])
 
 
 def dwebp_md5(path):
@@ -118,6 +162,12 @@ def main():
             data = f.read()
         for k, case in enumerate(token_cases(data, count, rng)):
             write(name + "_tokens", k, case)
+
+    for name in TRUNCATED_FILES:
+        with open(f"testdata/{name}.webp", "rb") as f:
+            data = f.read()
+        for k, case in enumerate(truncation_cases(data, rng)):
+            write(name + "_truncated", k, case)
 
     ours = our_md5s(paths)
     disagreements = []

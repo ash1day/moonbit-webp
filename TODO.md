@@ -64,7 +64,7 @@
   - [x] VP8X があるとき、RIFF サイズの検査にパディングを含めない（libwebp の ParseOptionalChunks は含める）
   - [x] VP8 の先頭パーティション長を、宣言されたチャンクサイズと照合しない（libwebp の VP8GetInfo は `partition_length >= chunk_size` を拒否）
   - [x] 8 バイト未満の VP8L ストリーム（ALPH 経由）を、libwebp はゼロで 64 ビットまで読める。こちらはエラー
-  - [ ] 差分テストに切り詰めのケースを足す。`robustness_wbtest` の切り詰めは RIFF サイズを残すのでデコーダ内部の EOF まで届かない
+  - [x] 差分テストに切り詰めのケースを足す。`robustness_wbtest` の切り詰めは RIFF サイズを残すのでデコーダ内部の EOF まで届かない。VP8 / VP8L / ALPH の中身を切り詰めてサイズを合わせたケースを両方に足した。差分テストは 50,676 件で差 3 件、3 件とも libwebp の 8 ビット経路（下の「残る差」）
   - [x] riff: 2 GiB 近い入力で `pos + 8` が溢れる
 - [ ] 残る差: 壊れた ALPH で最後の画素が末尾を越えて読む場合、libwebp の 8 ビット経路（color indexing だけ、color cache なし、R/B/A が 1 記号）は受け入れるが、こちらはエラーにする
 - [ ] `ImageData` を他の MoonBit 画像ライブラリと相互運用しやすくする（変換関数や PNG 書き出しの例）
