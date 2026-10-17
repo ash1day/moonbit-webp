@@ -99,3 +99,16 @@ test "a frame outside the canvas raises DecodeError" {
     "frame 3 (15x13 at 30, 28) does not fit in the 45x33 canvas",
   )
 }
+
+///|
+test "parse_animation reads the loop count and background color" {
+  // expected values are the ones tools/anim_oracle prints
+  let info = path => {
+    let animation = parse_animation(
+      @fs.read_file_to_bytes("testdata/\{path}.webp"),
+    )
+    (animation.loop_count, animation.background_color)
+  }
+  assert_eq(info("animated-extra/offsets"), (3, 0xff102030))
+  assert_eq(info("animated/random_lossy"), (0, 0xffffffff))
+}

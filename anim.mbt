@@ -96,6 +96,8 @@ fn frame_chunks(
 priv struct Animation {
   canvas_width : Int32
   canvas_height : Int32
+  loop_count : Int32 // 0 means forever
+  background_color : UInt32 // 0xAARRGGBB; libwebp does not draw it
   frames : Array[AnimFrame]
 }
 
@@ -108,6 +110,17 @@ fn parse_animation(webp_data : Bytes) -> Animation raise DecodeError {
     raise Invalid("animated WebP without VP8X")
   }
   let header = parse_vp8x(payload(webp_data, vp8x))
+  let mut loop_count = 0
+  let mut background_color : UInt32 = 0xffffffff
+  // libwebp uses the first ANIM chunk and ignores the others
+  for chunk in chunks {
+    if chunk.chunk_type is ANIM {
+      let anim = payload(webp_data, chunk)
+      background_color = (read_le24(anim, 0) | (anim[3].to_int() << 24)).reinterpret_as_uint()
+      loop_count = anim[4].to_int() | (anim[5].to_int() << 8)
+      break
+    }
+  }
   let frames = parse_frames(webp_data, chunks)
   // offsets and sizes are at most 25 bits, so the sums cannot overflow
   for i, f in frames {
@@ -121,6 +134,8 @@ fn parse_animation(webp_data : Bytes) -> Animation raise DecodeError {
   {
     canvas_width: header.canvas_width,
     canvas_height: header.canvas_height,
+    loop_count,
+    background_color,
     frames,
   }
 }
