@@ -17,14 +17,15 @@ priv struct AnimFrame {
 ///|
 /// The chunks of an animated WebP file, including the ones inside ANMF chunks
 fn animation_chunks(webp_data : Bytes) -> Array[@riff.Chunk] raise DecodeError {
-  guard @riff.parse(webp_data) is Some(file) else {
+  // only the header: the chunks are scanned differently from a still image
+  guard @riff.parse_header(webp_data) is Some(file_size) else {
     raise Invalid("invalid RIFF/WebP header")
   }
   // like libwebp's demuxer, which reads nothing after the RIFF data
-  if file.file_size < 0 || file.file_size > webp_data.length() - 8 {
+  if file_size < 0 || file_size > webp_data.length() - 8 {
     raise Invalid("file is shorter than the RIFF size")
   }
-  let end = file.file_size + 8
+  let end = file_size + 8
   guard @riff.parse_chunks(webp_data, 12, end, frames=true) is Some(chunks) else {
     raise Invalid("chunk size too large")
   }

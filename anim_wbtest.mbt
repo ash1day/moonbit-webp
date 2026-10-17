@@ -523,3 +523,16 @@ test "semi-transparent frames blend and dispose like WebPAnimDecoder" {
     (440, "3088772901be2c80cee96b6b8c077017"),
   ])
 }
+
+///|
+test "the size of an ANMF chunk does not decide where the next chunk is" {
+  // libwebp's demuxer reads the chunks after the frame header in sequence,
+  // so a larger ANMF size that still holds the frame's chunks is accepted.
+  // Frame 1's ANMF size is at byte 48 (1564 = 0x061c); 0x0645 is 1605.
+  // tools/anim_oracle decodes this file like the original.
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/offsets.webp")
+  let animation = parse_animation(with_byte(data, 48, b'\x45')) catch {
+    e => fail("expected the animation, got \{e}")
+  }
+  assert_eq(animation.frames.length(), 3)
+}

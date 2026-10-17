@@ -117,3 +117,21 @@ test "frames returned by next_frame do not change afterwards" {
   assert_eq(md5_of(images[6]), "24afee6af2b86be85322deecc15e4a6d")
   assert_eq(decoder.next_frame() is None, true)
 }
+
+///|
+test "AnimationDecoder accepts an ANMF chunk larger than its frame" {
+  // frame 1's ANMF size (byte 48) changed from 1564 to 1605; libwebp
+  // (tools/anim_oracle) decodes this file like the original
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/offsets.webp")
+  let changed = Bytes::makei(data.length(), fn(i) {
+    if i == 48 {
+      b'\x45'
+    } else {
+      data[i]
+    }
+  })
+  let decoder = @webp.AnimationDecoder::new(changed) catch {
+    e => fail("expected a decoder, got \{e}")
+  }
+  assert_eq(decoder.frame_count(), 3)
+}

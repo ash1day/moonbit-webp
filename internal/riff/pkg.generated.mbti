@@ -10,6 +10,8 @@ pub fn parse(Bytes) -> WebPFile?
 
 pub fn parse_chunks(Bytes, Int, Int, frames? : Bool) -> Array[Chunk]?
 
+pub fn parse_header(Bytes) -> Int?
+
 // Errors
 
 // Types and methods

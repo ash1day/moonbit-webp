@@ -52,19 +52,19 @@ fn has_chunk_header(pos : Int32, end : Int32) -> Bool {
 }
 
 ///|
+/// Checks the 12-byte "RIFF" ... "WEBP" header and returns the RIFF size
+pub fn parse_header(data : Bytes) -> Int32? {
+  if data.length() < 12 ||
+    !match_fourcc(data, 0, b"RIFF") ||
+    !match_fourcc(data, 8, b"WEBP") {
+    return None
+  }
+  Some(read_u32_le(data, 4))
+}
+
+///|
 pub fn parse(data : Bytes) -> WebPFile? {
-  if data.length() < 12 {
-    return None
-  }
-  // Check RIFF magic
-  if !match_fourcc(data, 0, b"RIFF") {
-    return None
-  }
-  let file_size = read_u32_le(data, 4)
-  // Check WEBP signature
-  if !match_fourcc(data, 8, b"WEBP") {
-    return None
-  }
+  guard parse_header(data) is Some(file_size) else { return None }
   let end = if file_size >= 0 && file_size < data.length() - 8 {
     file_size + 8
   } else {

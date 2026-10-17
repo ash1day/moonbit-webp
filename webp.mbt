@@ -31,13 +31,15 @@ priv struct StillImage {
 ///|
 /// Whether the file has a VP8X chunk with the animation flag
 fn is_animation(webp_data : Bytes) -> Bool {
-  match @riff.parse(webp_data) {
-    Some({ chunks: [{ chunk_type: VP8X, offset, size, }, ..], .. }) =>
-      size >= 1 &&
-      offset < webp_data.length() &&
-      (webp_data[offset].to_int() & ANIMATION_FLAG) != 0
-    _ => false
-  }
+  // only the first chunk header (at 12) and its first byte (at 20): the rest
+  // of an animation is scanned differently from a still image
+  @riff.parse_header(webp_data) is Some(_) &&
+  webp_data.length() > 20 &&
+  webp_data[12] == b'V' &&
+  webp_data[13] == b'P' &&
+  webp_data[14] == b'8' &&
+  webp_data[15] == b'X' &&
+  (webp_data[20].to_int() & ANIMATION_FLAG) != 0
 }
 
 ///|
