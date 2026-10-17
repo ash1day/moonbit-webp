@@ -461,3 +461,48 @@ test "each frame decodes like the frame extracted with webpmux" {
     (64, 63, "4d23e9b3c872eb167add98919104c423"),
   ])
 }
+
+///|
+/// Checks the canvas after each frame against tools/anim_oracle: the time at
+/// which the frame ends and the MD5 of the RGBA canvas
+fn check_canvases(
+  path : String,
+  expected : Array[(Int32, String)],
+) -> Unit raise {
+  let data = @fs.read_file_to_bytes("testdata/\{path}.webp")
+  let compositor = Compositor::new(parse_animation(data))
+  let canvases = []
+  while compositor.draw_next(data) is Some(timestamp) {
+    canvases.push(
+      (
+        timestamp,
+        md5_hex(
+          Bytes::makei(compositor.canvas.length(), fn(i) {
+            compositor.canvas[i]
+          }),
+        ),
+      ),
+    )
+  }
+  assert_eq((path, canvases), (path, expected))
+}
+
+///|
+test "frames are drawn on the canvas like libwebp's WebPAnimDecoder" {
+  check_canvases("animated-extra/offsets", [
+    (100, "97093e67ffe41ac3cf737b7f7160fb92"),
+    (180, "04c3f92acd9fbfe2b650967ba66c328b"),
+    (240, "b37123e19f2e79090c1e5b3aea3c6345"),
+  ])
+  check_canvases("animated/random_lossy", [
+    (150, "e79794cc54b79b067ff8e76a259b67a8"),
+    (300, "47d539f1e4dc679ed8d7f03fabbd326a"),
+    (450, "ada5d26e8ce7d5f50d59648e54306bb7"),
+    (600, "c5b92ab9ae350cf9199a4a36078d2c43"),
+  ])
+  check_canvases("animated/random_lossless", [
+    (100, "dca76dfb37bf0a05142d87ec0f32acce"),
+    (200, "ed10889d93d7972db40cf74220faaf65"),
+    (300, "4d23e9b3c872eb167add98919104c423"),
+  ])
+}

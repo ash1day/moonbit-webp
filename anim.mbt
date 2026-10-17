@@ -11,6 +11,8 @@ priv struct AnimFrame {
   blend : Bool // alpha-blend onto the canvas instead of replacing it
   alpha : @riff.Chunk? // the ALPH chunk of a lossy frame
   image : @riff.Chunk // the VP8 or VP8L chunk
+  // an ALPH chunk, or the alpha bit of the VP8L header (libwebp's has_alpha)
+  has_alpha : Bool
 }
 
 ///|
@@ -99,6 +101,8 @@ fn parse_frames(
           blend: (anmf[15].to_int() & 2) == 0,
           alpha,
           image,
+          has_alpha: alpha is Some(_) ||
+          (image.chunk_type is VP8L && vp8l_alpha_bit(webp_data, image)),
         })
       }
       // libwebp's demuxer: every image of an animation is in an ANMF chunk
@@ -262,4 +266,183 @@ fn decode_frame(
     }
     @vp8.decode_bitstream(bitstream, alpha?)
   }
+}
+
+///|
+/// Draws the frames of an animation one after another on a canvas, like
+/// libwebp's WebPAnimDecoder (RGBA, not premultiplied)
+priv struct Compositor {
+  animation : Animation
+  canvas : FixedArray[Byte]
+  // the canvas after the previous frame, with its dispose method applied
+  disposed : FixedArray[Byte]
+  mut next : Int32 // index of the next frame
+  mut timestamp : Int32 // milliseconds at the end of the previous frame
+  mut previous_was_key_frame : Bool
+}
+
+///|
+#warnings("-unused_value")
+fn Compositor::new(animation : Animation) -> Compositor {
+  let size = animation.canvas_width * animation.canvas_height * 4
+  {
+    animation,
+    canvas: FixedArray::make(size, b'\x00'),
+    disposed: FixedArray::make(size, b'\x00'),
+    next: 0,
+    timestamp: 0,
+    previous_was_key_frame: false,
+  }
+}
+
+///|
+/// Draws the next frame and returns the time at which it ends, or `None`
+/// after the last frame. Follows libwebp's WebPAnimDecoderGetNext.
+#warnings("-unused_value")
+fn Compositor::draw_next(
+  self : Compositor,
+  webp_data : Bytes,
+) -> Int32? raise DecodeError {
+  let frames = self.animation.frames
+  if self.next >= frames.length() {
+    return None
+  }
+  let frame = frames[self.next]
+  let previous = if self.next > 0 { Some(frames[self.next - 1]) } else { None }
+  let key_frame = self.is_key_frame(frame, previous)
+  if key_frame {
+    self.canvas.fill(b'\x00')
+  } else {
+    self.disposed.blit_to(self.canvas, len=self.canvas.length())
+  }
+  let image = decode_frame(webp_data, frame)
+  let stride = self.animation.canvas_width * 4
+  for y in 0..<frame.height {
+    let row = (frame.y + y) * stride + frame.x * 4
+    for i in 0..<(frame.width * 4) {
+      self.canvas[row + i] = image.data[y * frame.width * 4 + i]
+    }
+  }
+  if previous is Some(previous) && frame.blend && !key_frame {
+    for y in frame.y..<(frame.y + frame.height) {
+      if previous.dispose_to_background {
+        // the previous frame's rectangle is transparent black, which blends
+        // to the frame's own pixel; blend only the rest of the row
+        self.blend_outside(frame, previous, y)
+      } else {
+        self.blend_row(y, frame.x, frame.width)
+      }
+    }
+  }
+  self.canvas.blit_to(self.disposed, len=self.canvas.length())
+  if frame.dispose_to_background {
+    for y in frame.y..<(frame.y + frame.height) {
+      let start = y * stride + frame.x * 4
+      self.disposed.fill(b'\x00', start~, end=start + frame.width * 4)
+    }
+  }
+  self.previous_was_key_frame = key_frame
+  self.timestamp += frame.duration
+  self.next += 1
+  Some(self.timestamp)
+}
+
+///|
+/// libwebp's IsKeyFrame: whether the frame is drawn on a transparent canvas
+/// instead of the previous one
+fn Compositor::is_key_frame(
+  self : Compositor,
+  frame : AnimFrame,
+  previous : AnimFrame?,
+) -> Bool {
+  guard previous is Some(previous) else { return true }
+  if (!frame.has_alpha || !frame.blend) && self.is_full(frame) {
+    return true
+  }
+  previous.dispose_to_background &&
+  (self.is_full(previous) || self.previous_was_key_frame)
+}
+
+///|
+fn Compositor::is_full(self : Compositor, frame : AnimFrame) -> Bool {
+  frame.width == self.animation.canvas_width &&
+  frame.height == self.animation.canvas_height
+}
+
+///|
+/// libwebp's FindBlendRangeAtRow: blends the parts of row `y` of the frame
+/// that lie outside the previous frame's rectangle
+fn Compositor::blend_outside(
+  self : Compositor,
+  frame : AnimFrame,
+  previous : AnimFrame,
+  y : Int32,
+) -> Unit {
+  let frame_end = frame.x + frame.width
+  let previous_end = previous.x + previous.width
+  if y < previous.y ||
+    y >= previous.y + previous.height ||
+    frame.x >= previous_end ||
+    frame_end <= previous.x {
+    self.blend_row(y, frame.x, frame.width)
+    return
+  }
+  if frame.x < previous.x {
+    self.blend_row(y, frame.x, previous.x - frame.x)
+  }
+  if frame_end > previous_end {
+    self.blend_row(y, previous_end, frame_end - previous_end)
+  }
+}
+
+///|
+/// Blends `width` pixels of row `y` from `x` onto the disposed canvas
+fn Compositor::blend_row(
+  self : Compositor,
+  y : Int32,
+  x : Int32,
+  width : Int32,
+) -> Unit {
+  let start = (y * self.animation.canvas_width + x) * 4
+  for i = start; i < start + width * 4; i = i + 4 {
+    if self.canvas[i + 3] != b'\xff' {
+      blend_pixel(self.canvas, self.disposed, i)
+    }
+  }
+}
+
+///|
+/// libwebp's BlendPixelNonPremult: draws the pixel of `src` at `i` over the
+/// one of `dst`, in place in `src`
+fn blend_pixel(
+  src : FixedArray[Byte],
+  dst : FixedArray[Byte],
+  i : Int32,
+) -> Unit {
+  let src_a = src[i + 3].to_int()
+  if src_a == 0 {
+    for c in 0..<4 {
+      src[i + c] = dst[i + c]
+    }
+    return
+  }
+  let dst_a = dst[i + 3].to_int()
+  // approximately dst_a * (255 - src_a) / 255
+  let dst_factor_a = (dst_a * (256 - src_a)) >> 8
+  let blend_a = src_a + dst_factor_a
+  let scale = (1 << 24) / blend_a
+  for c in 0..<3 {
+    let unscaled = src[i + c].to_int() * src_a +
+      dst[i + c].to_int() * dst_factor_a
+    // libwebp computes this in 32 bits; it cannot overflow
+    src[i + c] = ((unscaled.to_int64() * scale.to_int64()) >> 24).to_byte()
+  }
+  src[i + 3] = blend_a.to_byte()
+}
+
+///|
+/// The alpha_is_used bit of a VP8L header
+fn vp8l_alpha_bit(webp_data : Bytes, chunk : @riff.Chunk) -> Bool {
+  // after the signature byte, 14 bits of width - 1 and 14 of height - 1
+  chunk.size >= 5 && (webp_data[chunk.offset + 4].to_int() & 0x10) != 0
 }
