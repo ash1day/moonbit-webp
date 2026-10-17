@@ -82,6 +82,11 @@ pub fn frame_size(chunk : Bytes) -> (Int32, Int32) raise @image.DecodeError {
   if ((bits >> 4) & 1) == 0 {
     raise @image.Invalid("frame not displayable")
   }
+  if bits >> 5 >= chunk.length() {
+    raise @image.Invalid(
+      "VP8 partition length \{bits >> 5} is not shorter than the chunk size \{chunk.length()}",
+    )
+  }
   if chunk[3] != b'\x9d' || chunk[4] != b'\x01' || chunk[5] != b'\x2a' {
     raise @image.Invalid("bad VP8 start code")
   }

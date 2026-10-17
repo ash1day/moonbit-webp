@@ -503,3 +503,21 @@ test "with VP8X the RIFF size must include chunk padding" {
   )
   assert_eq(md5_hex(simple.data), "877731de5af73ba624d64cd36bf74d61")
 }
+
+///|
+test "a first partition as long as the VP8 chunk raises DecodeError" {
+  // libwebp's VP8GetInfo requires the partition to be shorter than the
+  // declared chunk size; dwebp rejects this file. The first partition of
+  // small_31x13 is 35 bytes long and the VP8 chunk size is at byte 16.
+  let data = patch("lossy-extra/small_31x13", 16, b'\x23')
+  check_error(
+    Bytes::makei(data.length(), fn(i) {
+      if i >= 17 && i < 20 {
+        b'\x00'
+      } else {
+        data[i]
+      }
+    }),
+    "VP8 partition length 35 is not shorter than the chunk size 35",
+  )
+}

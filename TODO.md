@@ -62,7 +62,7 @@
   - [x] VP8L: color cache から読んだ画素をキャッシュに書き戻さない。未書き込みのスロットを参照すると画素が変わる
   - [x] VP8X を先頭以外のチャンクからも拾う（libwebp は "WEBP" 直後だけ）
   - [x] VP8X があるとき、RIFF サイズの検査にパディングを含めない（libwebp の ParseOptionalChunks は含める）
-  - [ ] VP8 の先頭パーティション長を、宣言されたチャンクサイズと照合しない（libwebp の VP8GetInfo は `partition_length >= chunk_size` を拒否）
+  - [x] VP8 の先頭パーティション長を、宣言されたチャンクサイズと照合しない（libwebp の VP8GetInfo は `partition_length >= chunk_size` を拒否）
   - [ ] 8 バイト未満の VP8L ストリーム（ALPH 経由）を、libwebp はゼロで 64 ビットまで読める。こちらはエラー
   - [ ] 差分テストに切り詰めのケースを足す。`robustness_wbtest` の切り詰めは RIFF サイズを残すのでデコーダ内部の EOF まで届かない
   - [ ] riff: 2 GiB 近い入力で `pos + 8` が溢れる
