@@ -536,3 +536,15 @@ test "the size of an ANMF chunk does not decide where the next chunk is" {
   }
   assert_eq(animation.frames.length(), 3)
 }
+
+///|
+test "every ANIM chunk must be at least 6 bytes with padding" {
+  // libwebp's demuxer checks the size of each ANIM chunk before ignoring
+  // the ones after the first; tools/anim_oracle rejects these files
+  for size in [0, 4] {
+    check_animation_error(
+      offsets_with([("ANIM", Bytes::make(size, b'\x00'))], 5),
+      "ANIM chunk is shorter than 6 bytes: \{size}",
+    )
+  }
+}
