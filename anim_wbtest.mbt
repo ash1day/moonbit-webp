@@ -367,3 +367,29 @@ test "the size of a frame comes from its bitstream, not its ANMF header" {
     assert_eq((frames[2].width, frames[2].height), (15, 13))
   }
 }
+
+///|
+/// `data` with the 24-bit value at `pos` replaced
+fn with_le24(data : Bytes, pos : Int32, value : Int32) -> Bytes {
+  Bytes::makei(data.length(), fn(i) {
+    if i >= pos && i < pos + 3 {
+      (value >> (8 * (i - pos))).to_byte()
+    } else {
+      data[i]
+    }
+  })
+}
+
+///|
+test "an ANMF header with an area of 2^32 pixels or more raises DecodeError" {
+  // libwebp checks the ANMF size before replacing it with the bitstream's.
+  // Frame 3's ANMF width - 1 and height - 1 are at bytes 1742 and 1745;
+  // tools/anim_oracle rejects 65536x65536 and decodes 65536x65535.
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/offsets.webp")
+  let wide = with_le24(data, 1742, 0xffff)
+  check_animation_error(
+    with_le24(wide, 1745, 0xffff),
+    "frame 3 is too large: 65536x65536",
+  )
+  assert_eq(parse_animation(with_le24(wide, 1745, 0xfffe)).frames.length(), 3)
+}

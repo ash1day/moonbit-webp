@@ -78,6 +78,14 @@ fn parse_frames(
             "the chunks of frame \{frames.length() + 1} do not fit in its ANMF chunk",
           )
         }
+        // libwebp checks the ANMF size against MAX_IMAGE_AREA (2^32)
+        let anmf_width = read_le24(anmf, 6) + 1
+        let anmf_height = read_le24(anmf, 9) + 1
+        if anmf_width.to_int64() * anmf_height.to_int64() >= 1L << 32 {
+          raise Invalid(
+            "frame \{frames.length() + 1} is too large: \{anmf_width}x\{anmf_height}",
+          )
+        }
         // like libwebp's SetFrameInfo, the size comes from the bitstream
         let (width, height) = image_size(webp_data, image)
         // offsets are stored divided by 2
