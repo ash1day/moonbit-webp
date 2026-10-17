@@ -24,6 +24,7 @@ pub fn decode(
 priv struct StillImage {
   file : @riff.WebPFile
   image : @riff.Chunk // the VP8 or VP8L chunk
+  bitstream : Bytes // from the image chunk's payload to the end of the input
   width : Int32
   height : Int32
 }
@@ -70,10 +71,18 @@ fn read_still(
   guard file.chunks.last() is Some({ chunk_type: VP8 | VP8L, .. } as image) else {
     raise Invalid("no VP8 or VP8L chunk found")
   }
+  if image.size > webp_data.length() - image.offset {
+    raise Invalid("\{image.chunk_type.fourcc()} chunk exceeds file size")
+  }
+  // like libwebp, the bitstream runs to the end of the input, not of the
+  // chunk; the size comes from the same bytes the decoder reads
+  let bitstream = Bytes::makei(webp_data.length() - image.offset, fn(i) {
+    webp_data[image.offset + i]
+  })
   let (width, height) = if image.chunk_type is VP8L {
-    @vp8l.image_size(payload(webp_data, image))
+    @vp8l.image_size(bitstream)
   } else {
-    @vp8.frame_size(payload(webp_data, image))
+    @vp8.frame_size(bitstream, chunk_size=image.size)
   }
   if vp8x is Some({ canvas_width, canvas_height, .. }) &&
     (canvas_width != width || canvas_height != height) {
@@ -84,7 +93,7 @@ fn read_still(
   if width * height > max_pixels {
     raise TooLarge("image size \{width}x\{height} exceeds \{max_pixels} pixels")
   }
-  { file, image, width, height, }
+  { file, image, bitstream, width, height, }
 }
 
 ///|
@@ -93,12 +102,8 @@ fn decode_still(
   webp_data : Bytes,
   still : StillImage,
 ) -> ImageData raise DecodeError {
-  let image = still.image
-  // like libwebp, the bitstream runs to the end of the input, not of the chunk
-  let bitstream = Bytes::makei(webp_data.length() - image.offset, fn(i) {
-    webp_data[image.offset + i]
-  })
-  if image.chunk_type is VP8L {
+  let bitstream = still.bitstream
+  if still.image.chunk_type is VP8L {
     @vp8l.decode_bitstream(bitstream)
   } else {
     let alpha = match find_alpha_chunk(webp_data, still.file) {

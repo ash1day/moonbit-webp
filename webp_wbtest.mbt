@@ -564,3 +564,23 @@ test "decode lossy headers that libwebp's encoder does not write" {
     "lossy-crafted/sharpness6", 128, 128, "0d9e2197287bb580c4728f75ed20d4d2",
   )
 }
+
+///|
+test "max_pixels uses the image size the decoder will read" {
+  // Like libwebp, the bitstream runs to the end of the input, so a VP8L
+  // chunk size of 1 (bytes 16 to 19) still decodes the whole 400x301 image
+  // (dwebp does). The size check must read the same header.
+  let data = @fs.read_file_to_bytes("testdata/lossless/1_webp_ll.webp")
+  let short = Bytes::makei(data.length(), fn(i) {
+    match i {
+      16 => b'\x01'
+      17 | 18 | 19 => b'\x00'
+      _ => data[i]
+    }
+  })
+  check_limit_error(
+    short,
+    400 * 301 - 1,
+    "image size 400x301 exceeds 120399 pixels",
+  )
+}

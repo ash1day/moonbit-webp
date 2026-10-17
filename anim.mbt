@@ -233,10 +233,12 @@ fn image_size(
   webp_data : Bytes,
   chunk : @riff.Chunk,
 ) -> (Int32, Int32) raise DecodeError {
+  // the bitstream decode_frame reads: the chunk with its padding
+  let bitstream = frame_bitstream(webp_data, chunk)
   if chunk.chunk_type is VP8L {
-    @vp8l.image_size(payload(webp_data, chunk))
+    @vp8l.image_size(bitstream)
   } else {
-    @vp8.frame_size(payload(webp_data, chunk))
+    @vp8.frame_size(bitstream, chunk_size=chunk.size)
   }
 }
 
@@ -247,10 +249,7 @@ fn decode_frame(
   frame : AnimFrame,
 ) -> ImageData raise DecodeError {
   let image = frame.image
-  // unlike a still image, the bitstream ends with the chunk and its padding
-  let bitstream = Bytes::makei(image.size + image.size % 2, fn(i) {
-    webp_data[image.offset + i]
-  })
+  let bitstream = frame_bitstream(webp_data, image)
   if image.chunk_type is VP8L {
     @vp8l.decode_bitstream(bitstream)
   } else {
@@ -572,4 +571,14 @@ pub fn AnimationDecoder::background_color(self : AnimationDecoder) -> UInt32 {
     Still(_, _) => 0xffffffff
     Animated(compositor) => compositor.animation.background_color
   }
+}
+
+///|
+/// The bitstream of a frame's VP8 or VP8L chunk. Unlike a still image's, it
+/// ends with the chunk and its padding, as in libwebp's demuxer.
+fn frame_bitstream(webp_data : Bytes, chunk : @riff.Chunk) -> Bytes {
+  // animation_chunks checked that the padded chunk is in the RIFF data
+  Bytes::makei(chunk.size + chunk.size % 2, fn(i) {
+    webp_data[chunk.offset + i]
+  })
 }

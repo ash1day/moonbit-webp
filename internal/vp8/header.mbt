@@ -64,9 +64,15 @@ fn read_optional_signed(br : BoolDecoder, n : Int32) -> Int32 {
 }
 
 ///|
-/// Reads the width and height from the 10-byte frame header of a VP8 chunk
-/// payload, validating the header without decoding anything
-pub fn frame_size(chunk : Bytes) -> (Int32, Int32) raise @image.DecodeError {
+/// Reads the width and height from the 10-byte frame header at the start of
+/// `chunk`, validating the header without decoding anything. Like libwebp's
+/// VP8GetInfo, `chunk` is the bitstream the decoder will read, and
+/// `chunk_size` the size in the chunk header, which the first partition
+/// must be shorter than.
+pub fn frame_size(
+  chunk : Bytes,
+  chunk_size~ : Int32 = chunk.length(),
+) -> (Int32, Int32) raise @image.DecodeError {
   if chunk.length() < 10 {
     raise @image.Invalid("truncated VP8 header")
   }
@@ -82,9 +88,9 @@ pub fn frame_size(chunk : Bytes) -> (Int32, Int32) raise @image.DecodeError {
   if ((bits >> 4) & 1) == 0 {
     raise @image.Invalid("frame not displayable")
   }
-  if bits >> 5 >= chunk.length() {
+  if bits >> 5 >= chunk_size {
     raise @image.Invalid(
-      "VP8 partition length \{bits >> 5} is not shorter than the chunk size \{chunk.length()}",
+      "VP8 partition length \{bits >> 5} is not shorter than the chunk size \{chunk_size}",
     )
   }
   if chunk[3] != b'\x9d' || chunk[4] != b'\x01' || chunk[5] != b'\x2a' {

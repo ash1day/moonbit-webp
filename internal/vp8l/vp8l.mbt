@@ -38,9 +38,13 @@ pub fn decode_bitstream(bitstream : Bytes) -> ImageData raise DecodeError {
 }
 
 ///|
-/// Reads the width and height from the 5-byte header of a VP8L chunk payload,
-/// validating the header without decoding anything
+/// Reads the width and height from the 5-byte header at the start of a VP8L
+/// bitstream, validating the header without decoding anything. Like libwebp's
+/// VP8LGetInfo, `chunk` is the bitstream the decoder will read.
 pub fn image_size(chunk : Bytes) -> (Int32, Int32) raise DecodeError {
+  if chunk.length() < 5 {
+    raise Invalid("truncated VP8L header")
+  }
   read_header(@bitreader.BitReader::new(chunk))
 }
 
