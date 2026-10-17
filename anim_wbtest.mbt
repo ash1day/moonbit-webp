@@ -124,3 +124,69 @@ test "an animation without an ANIM chunk raises DecodeError" {
     "ANMF chunk before the ANIM chunk",
   )
 }
+
+///|
+/// The parts of offsets.webp: the VP8X and ANIM payloads, and for each frame
+/// the 16-byte ANMF header and the chunks inside the ANMF chunk
+fn offsets_parts() -> (Bytes, Bytes, Array[(Bytes, Array[(String, Bytes)])]) raise {
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/offsets.webp")
+  let top = @riff.parse_chunks(data, 12, data.length()).unwrap()
+  let bytes_of = (data : Bytes, chunk : @riff.Chunk) => {
+    Bytes::makei(chunk.size, fn(i) { data[chunk.offset + i] })
+  }
+  let frames = top[2:].map(fn(anmf) {
+    let payload = bytes_of(data, anmf)
+    let inner = @riff.parse_chunks(payload, 16, payload.length())
+      .unwrap()
+      .map(c => (fourcc_of(c.chunk_type), bytes_of(payload, c)))
+    (Bytes::makei(16, fn(i) { payload[i] }), inner)
+  })
+  (bytes_of(data, top[0]), bytes_of(data, top[1]), frames)
+}
+
+///|
+/// The four characters of a chunk type as written in the file
+fn fourcc_of(chunk_type : @riff.ChunkType) -> String {
+  match chunk_type {
+    VP8 => "VP8 "
+    XMP => "XMP "
+    other => other.fourcc()
+  }
+}
+
+///|
+/// An ANMF chunk with the given frame header and chunks inside
+fn anmf(header : Bytes, inner : Array[(String, Bytes)]) -> (String, Bytes) {
+  let buf = Buffer()
+  buf.write_bytes(header)
+  let body = build_webp(inner)
+  // build_webp adds the 12-byte RIFF header; keep only the chunks
+  buf.write_bytes(Bytes::makei(body.length() - 12, fn(i) { body[12 + i] }))
+  ("ANMF", buf.to_bytes())
+}
+
+///|
+test "an ANIM chunk of 5 bytes reads the loop count from the padding byte" {
+  // libwebp reads the padded size, 6 bytes; tools/anim_oracle prints
+  // loop 3 for this file because the high byte (padding) is 0
+  let (vp8x, anim, frames) = offsets_parts()
+  let data = build_webp(
+    [("VP8X", vp8x), ("ANIM", Bytes::makei(5, fn(i) { anim[i] }))] +
+    frames.map(f => anmf(f.0, f.1)),
+  )
+  let animation = parse_animation(data)
+  assert_eq(animation.loop_count, 3)
+}
+
+///|
+test "an ANIM chunk shorter than 6 bytes with padding raises DecodeError" {
+  // tools/anim_oracle prints "error" for this file
+  let (vp8x, anim, frames) = offsets_parts()
+  check_animation_error(
+    build_webp(
+      [("VP8X", vp8x), ("ANIM", Bytes::makei(4, fn(i) { anim[i] }))] +
+      frames.map(f => anmf(f.0, f.1)),
+    ),
+    "ANIM chunk is shorter than 6 bytes: 4",
+  )
+}

@@ -114,7 +114,7 @@ fn parse_animation(webp_data : Bytes) -> Animation raise DecodeError {
   for chunk in chunks {
     match chunk.chunk_type {
       // libwebp uses the first ANIM chunk and ignores the others
-      ANIM if anim is None => anim = Some(payload(webp_data, chunk))
+      ANIM if anim is None => anim = Some(read_anim(webp_data, chunk))
       ANMF if anim is None => raise Invalid("ANMF chunk before the ANIM chunk")
       _ => ()
     }
@@ -144,4 +144,17 @@ fn parse_animation(webp_data : Bytes) -> Animation raise DecodeError {
     background_color,
     frames,
   }
+}
+
+///|
+/// The 6 bytes of an ANIM chunk. Like libwebp, a 5-byte chunk is read with
+/// its padding byte.
+fn read_anim(webp_data : Bytes, chunk : @riff.Chunk) -> Bytes raise DecodeError {
+  if chunk.size + chunk.size % 2 < 6 {
+    raise Invalid("ANIM chunk is shorter than 6 bytes: \{chunk.size}")
+  }
+  if chunk.offset > webp_data.length() - 6 {
+    raise Invalid("ANIM chunk exceeds file size")
+  }
+  Bytes::makei(6, fn(i) { webp_data[chunk.offset + i] })
 }
