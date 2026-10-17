@@ -67,3 +67,35 @@ test "parse_frames finds the ALPH and image chunks of each frame" {
     (Some(26), "VP8", 40),
   ])
 }
+
+///|
+/// Returns `data` with byte `pos` replaced
+fn with_byte(data : Bytes, pos : Int32, value : Byte) -> Bytes {
+  Bytes::makei(data.length(), fn(i) { if i == pos { value } else { data[i] } })
+}
+
+///|
+fn check_animation_error(data : Bytes, message : String) -> Unit raise {
+  try parse_animation(data) |> ignore catch {
+    Invalid(m) => assert_eq(m, message)
+    _ => fail("expected Invalid")
+  } noraise {
+    _ => fail("expected Invalid(\{message})")
+  }
+}
+
+///|
+test "a frame outside the canvas raises DecodeError" {
+  // libwebp's demuxer rejects both files (tools/anim_oracle prints "error").
+  // The third frame of offsets.webp is 15x13 at (30, 20) on a 45x33 canvas;
+  // its X offset / 2 is at byte 1736 and its Y offset / 2 at byte 1739.
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/offsets.webp")
+  check_animation_error(
+    with_byte(data, 1736, b'\x10'),
+    "frame 3 (15x13 at 32, 20) does not fit in the 45x33 canvas",
+  )
+  check_animation_error(
+    with_byte(data, 1739, b'\x0e'),
+    "frame 3 (15x13 at 30, 28) does not fit in the 45x33 canvas",
+  )
+}

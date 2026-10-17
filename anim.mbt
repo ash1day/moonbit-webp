@@ -89,3 +89,38 @@ fn frame_chunks(
   }
   (alpha, image)
 }
+
+///|
+/// An animated WebP file: the canvas from the VP8X chunk and the frames
+#warnings("-unused_field")
+priv struct Animation {
+  canvas_width : Int32
+  canvas_height : Int32
+  frames : Array[AnimFrame]
+}
+
+///|
+/// Reads the structure of an animated WebP file without decoding any frame
+#warnings("-unused_value")
+fn parse_animation(webp_data : Bytes) -> Animation raise DecodeError {
+  let chunks = animation_chunks(webp_data)
+  guard chunks is [{ chunk_type: VP8X, .. } as vp8x, ..] else {
+    raise Invalid("animated WebP without VP8X")
+  }
+  let header = parse_vp8x(payload(webp_data, vp8x))
+  let frames = parse_frames(webp_data, chunks)
+  // offsets and sizes are at most 25 bits, so the sums cannot overflow
+  for i, f in frames {
+    if f.x + f.width > header.canvas_width ||
+      f.y + f.height > header.canvas_height {
+      raise Invalid(
+        "frame \{i + 1} (\{f.width}x\{f.height} at \{f.x}, \{f.y}) does not fit in the \{header.canvas_width}x\{header.canvas_height} canvas",
+      )
+    }
+  }
+  {
+    canvas_width: header.canvas_width,
+    canvas_height: header.canvas_height,
+    frames,
+  }
+}
