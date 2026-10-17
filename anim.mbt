@@ -6,6 +6,9 @@ priv struct AnimFrame {
   y : Int32
   width : Int32
   height : Int32
+  duration : Int32 // milliseconds
+  dispose_to_background : Bool // clear the frame's rectangle afterwards
+  blend : Bool // alpha-blend onto the canvas instead of replacing it
 }
 
 ///|
@@ -28,6 +31,9 @@ fn parse_frames(
         y: read_le24(anmf, 3) * 2,
         width: read_le24(anmf, 6) + 1,
         height: read_le24(anmf, 9) + 1,
+        duration: read_le24(anmf, 12),
+        dispose_to_background: (anmf[15].to_int() & 1) != 0,
+        blend: (anmf[15].to_int() & 2) == 0,
       })
     }
   }

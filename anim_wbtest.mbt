@@ -42,3 +42,15 @@ test "parse_frames rejects an ANMF chunk shorter than 16 bytes" {
     }
   }
 }
+
+///|
+/// Expected values are the ones `webpinfo` prints, whose "Blend" is the raw
+/// bit (1 means do not blend)
+test "parse_frames reads the duration, dispose and blend of each frame" {
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/offsets.webp")
+  let file = @riff.parse(data).unwrap()
+  let frames = parse_frames(data, file).map(f => {
+    (f.duration, f.dispose_to_background, f.blend)
+  })
+  assert_eq(frames, [(100, false, true), (80, false, true), (60, true, false)])
+}
