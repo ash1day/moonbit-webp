@@ -393,3 +393,14 @@ test "an ANMF header with an area of 2^32 pixels or more raises DecodeError" {
   )
   assert_eq(parse_animation(with_le24(wide, 1745, 0xfffe)).frames.length(), 3)
 }
+
+///|
+test "a canvas of 2^32 pixels or more raises DecodeError" {
+  // The VP8X canvas width - 1 and height - 1 are at bytes 24 and 27;
+  // tools/anim_oracle rejects a 65536x65536 canvas
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/offsets.webp")
+  check_animation_error(
+    with_le24(with_le24(data, 24, 0xffff), 27, 0xffff),
+    "canvas is too large: 65536x65536",
+  )
+}

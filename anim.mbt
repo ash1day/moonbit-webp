@@ -162,6 +162,13 @@ fn parse_animation(webp_data : Bytes) -> Animation raise DecodeError {
     raise Invalid("animated WebP without VP8X")
   }
   let header = parse_vp8x(payload(webp_data, vp8x))
+  // libwebp's MAX_IMAGE_AREA
+  if header.canvas_width.to_int64() * header.canvas_height.to_int64() >=
+    1L << 32 {
+    raise Invalid(
+      "canvas is too large: \{header.canvas_width}x\{header.canvas_height}",
+    )
+  }
   // ICC, alpha, EXIF, XMP and animation (libwebp's ALL_VALID_FLAGS)
   if (header.flags | 0x3e) != 0x3e {
     raise Invalid("invalid VP8X flags: \{header.flags}")
