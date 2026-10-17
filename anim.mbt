@@ -110,16 +110,22 @@ fn parse_animation(webp_data : Bytes) -> Animation raise DecodeError {
     raise Invalid("animated WebP without VP8X")
   }
   let header = parse_vp8x(payload(webp_data, vp8x))
-  let mut loop_count = 0
-  let mut background_color : UInt32 = 0xffffffff
-  // libwebp uses the first ANIM chunk and ignores the others
+  let mut anim = None
   for chunk in chunks {
-    if chunk.chunk_type is ANIM {
-      let anim = payload(webp_data, chunk)
-      background_color = (read_le24(anim, 0) | (anim[3].to_int() << 24)).reinterpret_as_uint()
-      loop_count = anim[4].to_int() | (anim[5].to_int() << 8)
-      break
+    match chunk.chunk_type {
+      // libwebp uses the first ANIM chunk and ignores the others
+      ANIM if anim is None => anim = Some(payload(webp_data, chunk))
+      ANMF if anim is None => raise Invalid("ANMF chunk before the ANIM chunk")
+      _ => ()
     }
+  }
+  let (loop_count, background_color) = match anim {
+    Some(anim) =>
+      (
+        anim[4].to_int() | (anim[5].to_int() << 8),
+        (read_le24(anim, 0) | (anim[3].to_int() << 24)).reinterpret_as_uint(),
+      )
+    None => (0, 0xffffffffU)
   }
   let frames = parse_frames(webp_data, chunks)
   // offsets and sizes are at most 25 bits, so the sums cannot overflow

@@ -112,3 +112,15 @@ test "parse_animation reads the loop count and background color" {
   assert_eq(info("animated-extra/offsets"), (3, 0xff102030))
   assert_eq(info("animated/random_lossy"), (0, 0xffffffff))
 }
+
+///|
+test "an animation without an ANIM chunk raises DecodeError" {
+  // libwebp's demuxer requires ANIM before the first ANMF; dwebp and
+  // tools/anim_oracle reject this file. The ANIM chunk of offsets.webp is at
+  // byte 30; renaming it makes it an unknown chunk.
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/offsets.webp")
+  check_animation_error(
+    with_byte(data, 30, b'X'),
+    "ANMF chunk before the ANIM chunk",
+  )
+}

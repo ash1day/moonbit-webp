@@ -47,7 +47,7 @@
   - [x] ANMF のフィールド: 表示時間、dispose、blend
   - [x] `riff.parse` の走査を `parse_chunks` に切り出し、ANMF の中のチャンク（ALPH と VP8 / VP8L）を取り出す
   - [x] フレームの矩形がキャンバスからはみ出したらエラー（ANMF が 16 バイト未満ならエラーは済み）
-  - [ ] ANIM: 背景色とループ回数。アニメーションのフラグがあるのに ANIM がなければエラー
+  - [x] ANIM: 背景色とループ回数。アニメーションのフラグがあるのに ANIM がなければエラー
   - [ ] 上の demux 規則
   - [ ] 各フレームを単独でデコードし、`webpmux -get frame n` + dwebp と照合
   - [ ] 合成（blend / dispose）して `tools/anim_oracle` と照合
