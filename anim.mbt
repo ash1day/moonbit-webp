@@ -1,6 +1,5 @@
 ///|
 /// A frame of an animated WebP file, read from its ANMF chunk
-#warnings("-unused_field")
 priv struct AnimFrame {
   x : Int32
   y : Int32
@@ -17,7 +16,6 @@ priv struct AnimFrame {
 
 ///|
 /// The chunks of an animated WebP file, including the ones inside ANMF chunks
-#warnings("-unused_value")
 fn animation_chunks(webp_data : Bytes) -> Array[@riff.Chunk] raise DecodeError {
   guard @riff.parse(webp_data) is Some(file) else {
     raise Invalid("invalid RIFF/WebP header")
@@ -51,7 +49,6 @@ fn animation_chunks(webp_data : Bytes) -> Array[@riff.Chunk] raise DecodeError {
 
 ///|
 /// Reads the ANMF chunks of an animated WebP file, in order
-#warnings("-unused_value")
 fn parse_frames(
   webp_data : Bytes,
   chunks : Array[@riff.Chunk],
@@ -148,7 +145,6 @@ fn frame_chunks(
 
 ///|
 /// An animated WebP file: the canvas from the VP8X chunk and the frames
-#warnings("-unused_field")
 priv struct Animation {
   canvas_width : Int32
   canvas_height : Int32
@@ -159,7 +155,6 @@ priv struct Animation {
 
 ///|
 /// Reads the structure of an animated WebP file without decoding any frame
-#warnings("-unused_value")
 fn parse_animation(webp_data : Bytes) -> Animation raise DecodeError {
   let chunks = animation_chunks(webp_data)
   guard chunks is [{ chunk_type: VP8X, .. } as vp8x, ..] else {
@@ -246,7 +241,6 @@ fn image_size(
 
 ///|
 /// Decodes the image of one frame, at the frame's size
-#warnings("-unused_value")
 fn decode_frame(
   webp_data : Bytes,
   frame : AnimFrame,
@@ -282,7 +276,6 @@ priv struct Compositor {
 }
 
 ///|
-#warnings("-unused_value")
 fn Compositor::new(animation : Animation) -> Compositor {
   let size = animation.canvas_width * animation.canvas_height * 4
   {
@@ -298,7 +291,6 @@ fn Compositor::new(animation : Animation) -> Compositor {
 ///|
 /// Draws the next frame and returns the time at which it ends, or `None`
 /// after the last frame. Follows libwebp's WebPAnimDecoderGetNext.
-#warnings("-unused_value")
 fn Compositor::draw_next(
   self : Compositor,
   webp_data : Bytes,
@@ -445,4 +437,138 @@ fn blend_pixel(
 fn vp8l_alpha_bit(webp_data : Bytes, chunk : @riff.Chunk) -> Bool {
   // after the signature byte, 14 bits of width - 1 and 14 of height - 1
   chunk.size >= 5 && (webp_data[chunk.offset + 4].to_int() & 0x10) != 0
+}
+
+///|
+/// One frame of an animation: the whole canvas after the frame is drawn
+pub(all) struct AnimationFrame {
+  /// The canvas, `width * height * 4` bytes of RGBA, not premultiplied
+  image : ImageData
+  /// When the frame ends, in milliseconds from the start of the animation
+  timestamp : Int32
+  /// How long the frame is shown, in milliseconds
+  duration : Int32
+}
+
+///|
+/// Decodes an animated WebP file frame by frame, drawing each frame on the
+/// canvas like libwebp's WebPAnimDecoder. A still image is one frame.
+struct AnimationDecoder {
+  webp_data : Bytes
+  source : FrameSource
+}
+
+///|
+priv enum FrameSource {
+  Animated(Compositor)
+  // a still image, until its one frame has been returned
+  Still(StillImage, Ref[Bool])
+}
+
+///|
+/// Reads and checks the structure of a WebP file. Raises `TooLarge` when the
+/// canvas has more than `max_pixels` pixels.
+///
+/// Like libwebp's WebPAnimDecoder, a still image is an animation of one frame
+/// at time 0 that plays once; it decodes like `decode`.
+pub fn AnimationDecoder::new(
+  webp_data : Bytes,
+  max_pixels~ : Int32 = MAX_PIXELS,
+) -> AnimationDecoder raise DecodeError {
+  if !is_animation(webp_data) {
+    let still = read_still(webp_data, max_pixels)
+    return { webp_data, source: Still(still, Ref(false)), }
+  }
+  let animation = parse_animation(webp_data)
+  let width = animation.canvas_width
+  let height = animation.canvas_height
+  // the canvas is up to 2^32 pixels, so compare in 64 bits
+  if width.to_int64() * height.to_int64() > max_pixels.to_int64() {
+    raise TooLarge(
+      "canvas size \{width}x\{height} exceeds \{max_pixels} pixels",
+    )
+  }
+  { webp_data, source: Animated(Compositor::new(animation)), }
+}
+
+///|
+/// Draws the next frame and returns it, or `None` after the last frame.
+/// Each frame's image is a new copy of the canvas.
+pub fn AnimationDecoder::next_frame(
+  self : AnimationDecoder,
+) -> AnimationFrame? raise DecodeError {
+  match self.source {
+    Still(_, { val: true, }) => None
+    Still(still, done) => {
+      done.val = true
+      Some({
+        image: decode_still(self.webp_data, still),
+        timestamp: 0,
+        duration: 0,
+      })
+    }
+    Animated(compositor) => {
+      guard compositor.draw_next(self.webp_data) is Some(timestamp) else {
+        return None
+      }
+      let canvas = compositor.canvas
+      let animation = compositor.animation
+      Some({
+        image: {
+          width: animation.canvas_width,
+          height: animation.canvas_height,
+          data: Bytes::makei(canvas.length(), fn(i) { canvas[i] }),
+        },
+        timestamp,
+        duration: animation.frames[compositor.next - 1].duration,
+      })
+    }
+  }
+}
+
+///|
+/// The canvas width
+pub fn AnimationDecoder::width(self : AnimationDecoder) -> Int32 {
+  match self.source {
+    Still(still, _) => still.width
+    Animated(compositor) => compositor.animation.canvas_width
+  }
+}
+
+///|
+/// The canvas height
+pub fn AnimationDecoder::height(self : AnimationDecoder) -> Int32 {
+  match self.source {
+    Still(still, _) => still.height
+    Animated(compositor) => compositor.animation.canvas_height
+  }
+}
+
+///|
+/// The number of frames
+pub fn AnimationDecoder::frame_count(self : AnimationDecoder) -> Int32 {
+  match self.source {
+    Still(_, _) => 1
+    Animated(compositor) => compositor.animation.frames.length()
+  }
+}
+
+///|
+/// How many times the animation plays; 0 means forever
+pub fn AnimationDecoder::loop_count(self : AnimationDecoder) -> Int32 {
+  match self.source {
+    Still(_, _) => 1
+    Animated(compositor) => compositor.animation.loop_count
+  }
+}
+
+///|
+/// The background color in the ANIM chunk, as 0xAARRGGBB (0xffffffff for a
+/// still image). Like libwebp's WebPAnimDecoder, the decoder does not use
+/// it: frames are drawn on a transparent canvas.
+pub fn AnimationDecoder::background_color(self : AnimationDecoder) -> UInt32 {
+  match self.source {
+    Still(_, _) => 0xffffffff
+    Animated(compositor) => compositor.animation.background_color
+  }
 }

@@ -9,3 +9,8 @@ import {
   "moonbitlang/x/fs",
   "moonbitlang/x/crypto",
 } for "wbtest"
+
+import {
+  "moonbitlang/x/fs",
+  "moonbitlang/x/crypto",
+} for "test"

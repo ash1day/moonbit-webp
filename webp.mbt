@@ -16,6 +16,37 @@ pub fn decode(
   webp_data : Bytes,
   max_pixels~ : Int32 = MAX_PIXELS,
 ) -> ImageData raise DecodeError {
+  decode_still(webp_data, read_still(webp_data, max_pixels))
+}
+
+///|
+/// A still image whose headers have been read and checked
+priv struct StillImage {
+  file : @riff.WebPFile
+  image : @riff.Chunk // the VP8 or VP8L chunk
+  width : Int32
+  height : Int32
+}
+
+///|
+/// Whether the file has a VP8X chunk with the animation flag
+fn is_animation(webp_data : Bytes) -> Bool {
+  match @riff.parse(webp_data) {
+    Some({ chunks: [{ chunk_type: VP8X, offset, size, }, ..], .. }) =>
+      size >= 1 &&
+      offset < webp_data.length() &&
+      (webp_data[offset].to_int() & ANIMATION_FLAG) != 0
+    _ => false
+  }
+}
+
+///|
+/// Reads and checks the headers of a still image, and its size against
+/// `max_pixels`, without allocating any pixel buffer
+fn read_still(
+  webp_data : Bytes,
+  max_pixels : Int32,
+) -> StillImage raise DecodeError {
   let file = match @riff.parse(webp_data) {
     Some(f) => f
     None => raise Invalid("invalid RIFF/WebP header")
@@ -37,8 +68,7 @@ pub fn decode(
   guard file.chunks.last() is Some({ chunk_type: VP8 | VP8L, .. } as image) else {
     raise Invalid("no VP8 or VP8L chunk found")
   }
-  let lossless = image.chunk_type is VP8L
-  let (width, height) = if lossless {
+  let (width, height) = if image.chunk_type is VP8L {
     @vp8l.image_size(payload(webp_data, image))
   } else {
     @vp8.frame_size(payload(webp_data, image))
@@ -52,15 +82,25 @@ pub fn decode(
   if width * height > max_pixels {
     raise TooLarge("image size \{width}x\{height} exceeds \{max_pixels} pixels")
   }
+  { file, image, width, height, }
+}
+
+///|
+/// Decodes a still image read by `read_still`
+fn decode_still(
+  webp_data : Bytes,
+  still : StillImage,
+) -> ImageData raise DecodeError {
+  let image = still.image
   // like libwebp, the bitstream runs to the end of the input, not of the chunk
   let bitstream = Bytes::makei(webp_data.length() - image.offset, fn(i) {
     webp_data[image.offset + i]
   })
-  if lossless {
+  if image.chunk_type is VP8L {
     @vp8l.decode_bitstream(bitstream)
   } else {
-    let alpha = match find_alpha_chunk(webp_data, file) {
-      Some(chunk) => Some(decode_alpha(chunk, width, height))
+    let alpha = match find_alpha_chunk(webp_data, still.file) {
+      Some(chunk) => Some(decode_alpha(chunk, still.width, still.height))
       None => None
     }
     @vp8.decode_bitstream(bitstream, alpha?)

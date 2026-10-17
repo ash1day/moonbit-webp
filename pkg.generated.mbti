@@ -13,6 +13,20 @@ pub fn decode(Bytes, max_pixels? : Int) -> @image.ImageData raise @image.DecodeE
 // Errors
 
 // Types and methods
+type AnimationDecoder
+pub fn AnimationDecoder::background_color(Self) -> UInt
+pub fn AnimationDecoder::frame_count(Self) -> Int
+pub fn AnimationDecoder::height(Self) -> Int
+pub fn AnimationDecoder::loop_count(Self) -> Int
+pub fn AnimationDecoder::new(Bytes, max_pixels? : Int) -> Self raise @image.DecodeError
+pub fn AnimationDecoder::next_frame(Self) -> AnimationFrame? raise @image.DecodeError
+pub fn AnimationDecoder::width(Self) -> Int
+
+pub(all) struct AnimationFrame {
+  image : @image.ImageData
+  timestamp : Int
+  duration : Int
+}
 
 // Type aliases
 pub using @image {type DecodeError}
