@@ -41,6 +41,11 @@ fn read_chunk_type(data : Bytes, offset : Int32) -> ChunkType {
 }
 
 ///|
+/// The frame header at the start of an ANMF chunk: offset, size, duration
+/// and flags
+const ANMF_HEADER_SIZE = 16
+
+///|
 /// Whether a chunk header (8 bytes) fits between `pos` and `end`
 fn has_chunk_header(pos : Int32, end : Int32) -> Bool {
   pos <= end && end - pos >= 8
@@ -74,7 +79,17 @@ pub fn parse(data : Bytes) -> WebPFile? {
 ///|
 /// Reads the chunk headers from `start` up to `end`. Returns `None` for a
 /// chunk size of 2 GiB or more.
-pub fn parse_chunks(data : Bytes, start : Int32, end : Int32) -> Array[Chunk]? {
+///
+/// A still image ends at its VP8 or VP8L chunk. With `frames=true` the scan
+/// goes on to `end` and, like libwebp's demuxer, continues inside each ANMF
+/// chunk after its 16-byte frame header: the chunks there belong to the
+/// frame, and the scan carries on at the top level after them.
+pub fn parse_chunks(
+  data : Bytes,
+  start : Int32,
+  end : Int32,
+  frames~ : Bool = false,
+) -> Array[Chunk]? {
   let chunks : Array[Chunk] = []
   let mut pos = start
   while has_chunk_header(pos, end) {
@@ -86,8 +101,12 @@ pub fn parse_chunks(data : Bytes, start : Int32, end : Int32) -> Array[Chunk]? {
     let data_offset = pos + 8
     chunks.push({ chunk_type, offset: data_offset, size: chunk_size, })
     // libwebp reads nothing after the image data of a still image
-    if chunk_type is (VP8 | VP8L) {
+    if !frames && chunk_type is (VP8 | VP8L) {
       break
+    }
+    if frames && chunk_type is ANMF && chunk_size >= ANMF_HEADER_SIZE {
+      pos = data_offset + ANMF_HEADER_SIZE
+      continue
     }
     // A truncated last chunk is kept; its size is checked by the reader
     if chunk_size >= end - data_offset {

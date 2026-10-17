@@ -149,3 +149,21 @@ test "the chunk header check does not overflow near Int32 max" {
   assert_eq(has_chunk_header(12, 20), true)
   assert_eq(has_chunk_header(13, 20), false)
 }
+
+///|
+test "parse_chunks with frames enters each ANMF chunk" {
+  // the sizes are the ones webpinfo prints, minus the 8-byte chunk header
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/offsets.webp")
+  let chunks = parse_chunks(data, 12, data.length(), frames=true).unwrap()
+  assert_eq(chunks.map(c => (c.chunk_type.fourcc(), c.size)), [
+    ("VP8X", 10),
+    ("ANIM", 6),
+    ("ANMF", 1564),
+    ("VP8L", 1540),
+    ("ANMF", 104),
+    ("VP8", 80),
+    ("ANMF", 98),
+    ("ALPH", 26),
+    ("VP8", 40),
+  ])
+}
