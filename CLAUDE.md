@@ -40,4 +40,5 @@ internal/
 testdata/         # テスト画像（.moonignore でパッケージから除外）
 tools/differential/  # 壊れたファイルを libwebp と比べる差分テスト（run.py）
 tools/anim_oracle/   # libwebp の WebPAnimDecoder の出力（アニメーションの正解）
+tools/webp2png/      # 出力を PNG に書く例（依存なし、無圧縮）
 ```

@@ -56,6 +56,17 @@ many frames there are. A still image gives one frame. The background color
 of the file is available as `decoder.background_color()`, but, as in
 libwebp, frames are drawn on a transparent canvas.
 
+### Using the pixels
+
+`ImageData.data` is plain RGBA bytes, row by row with no padding, so it can
+be handed to anything that takes 8-bit RGBA: a canvas `ImageData` on the
+web, an image library, or a file writer. `tools/webp2png` is a small example
+that writes the frames as PNG files without other dependencies:
+
+```bash
+moon run tools/webp2png --target native -- in.webp out.png
+```
+
 ### Untrusted input
 
 `decode` reads the image size from the headers and checks it before it
