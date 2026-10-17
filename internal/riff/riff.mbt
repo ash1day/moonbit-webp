@@ -60,14 +60,23 @@ pub fn parse(data : Bytes) -> WebPFile? {
   if !match_fourcc(data, 8, b"WEBP") {
     return None
   }
-  // Parse chunks starting at offset 12
-  let chunks : Array[Chunk] = []
-  let mut pos = 12
   let end = if file_size >= 0 && file_size < data.length() - 8 {
     file_size + 8
   } else {
     data.length()
   }
+  match parse_chunks(data, 12, end) {
+    Some(chunks) => Some({ file_size, chunks, })
+    None => None
+  }
+}
+
+///|
+/// Reads the chunk headers from `start` up to `end`. Returns `None` for a
+/// chunk size of 2 GiB or more.
+pub fn parse_chunks(data : Bytes, start : Int32, end : Int32) -> Array[Chunk]? {
+  let chunks : Array[Chunk] = []
+  let mut pos = start
   while has_chunk_header(pos, end) {
     let chunk_type = read_chunk_type(data, pos)
     let chunk_size = read_u32_le(data, pos + 4)
@@ -87,5 +96,5 @@ pub fn parse(data : Bytes) -> WebPFile? {
     // RIFF chunks are padded to even size
     pos = data_offset + chunk_size + chunk_size % 2
   }
-  Some({ file_size, chunks, })
+  Some(chunks)
 }

@@ -8,6 +8,8 @@ import {
 // Values
 pub fn parse(Bytes) -> WebPFile?
 
+pub fn parse_chunks(Bytes, Int, Int) -> Array[Chunk]?
+
 // Errors
 
 // Types and methods
