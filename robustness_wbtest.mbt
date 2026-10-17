@@ -80,3 +80,47 @@ test "truncated and corrupted lossless files do not crash" {
   mutate_all("lossless-extra/dual_transform")
   mutate_all("regression/color_index")
 }
+
+///|
+/// Decodes every frame of `data` with AnimationDecoder, accepting either the
+/// frames or a DecodeError
+fn decode_frames_or_reject(data : Bytes) -> Unit {
+  try {
+    let decoder = AnimationDecoder::new(data, max_pixels=1 << 16)
+    while decoder.next_frame() is Some(_) {
+
+    }
+  } catch {
+    _ => ()
+  }
+}
+
+///|
+/// Every truncation and four single-byte changes at every position, decoded
+/// as an animation
+fn mutate_animation(path : String) -> Unit raise {
+  let data = @fs.read_file_to_bytes("testdata/\{path}.webp")
+  let n = data.length()
+  for len in 0..<n {
+    decode_frames_or_reject(Bytes::makei(len, fn(i) { data[i] }))
+  }
+  for pos in 0..<n {
+    let original = data[pos].to_int()
+    for value in [0, 0xff, original ^ 1, original ^ 0x80] {
+      decode_frames_or_reject(
+        Bytes::makei(n, fn(i) {
+          if i == pos {
+            value.to_byte()
+          } else {
+            data[i]
+          }
+        }),
+      )
+    }
+  }
+}
+
+///|
+test "truncated and corrupted animations do not crash" {
+  mutate_animation("animated-extra/offsets")
+}
