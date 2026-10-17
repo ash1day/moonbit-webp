@@ -238,12 +238,16 @@ fn image_size(
   webp_data : Bytes,
   chunk : @riff.Chunk,
 ) -> (Int32, Int32) raise DecodeError {
-  // the bitstream decode_frame reads: the chunk with its padding
-  let bitstream = frame_bitstream(webp_data, chunk)
+  // the start of the bitstream decode_frame reads (the chunk with its
+  // padding): the headers are at most 10 bytes
+  let length = chunk.size + chunk.size % 2
+  let header = Bytes::makei(if length < 10 { length } else { 10 }, fn(i) {
+    webp_data[chunk.offset + i]
+  })
   if chunk.chunk_type is VP8L {
-    @vp8l.image_size(bitstream)
+    @vp8l.image_size(header)
   } else {
-    @vp8.frame_size(bitstream, chunk_size=chunk.size)
+    @vp8.frame_size(header, chunk_size=chunk.size)
   }
 }
 
@@ -526,7 +530,7 @@ pub fn AnimationDecoder::next_frame(
         image: {
           width: animation.canvas_width,
           height: animation.canvas_height,
-          data: Bytes::makei(canvas.length(), fn(i) { canvas[i] }),
+          data: Bytes::from_array(canvas[:]),
         },
         timestamp,
         duration: animation.frames[compositor.next - 1].duration,
