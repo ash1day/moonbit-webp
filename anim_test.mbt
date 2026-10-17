@@ -135,3 +135,25 @@ test "AnimationDecoder accepts an ANMF chunk larger than its frame" {
   }
   assert_eq(decoder.frame_count(), 3)
 }
+
+///|
+test "AnimationDecoder rejects a canvas whose RGBA does not fit in an array" {
+  // a 32768x32768 canvas (VP8X width - 1 and height - 1 at bytes 24 and
+  // 27) is within a raised max_pixels, but its 4 GiB of RGBA is not
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/offsets.webp")
+  let big = Bytes::makei(data.length(), fn(i) {
+    match i {
+      24 | 27 => b'\xff'
+      25 | 28 => b'\x7f'
+      26 | 29 => b'\x00'
+      _ => data[i]
+    }
+  })
+  try @webp.AnimationDecoder::new(big, max_pixels=1 << 30) |> ignore catch {
+    TooLarge(m) =>
+      assert_eq(m, "canvas size 32768x32768 is too large for one RGBA buffer")
+    e => fail("expected TooLarge, got \{e}")
+  } noraise {
+    _ => fail("expected TooLarge")
+  }
+}

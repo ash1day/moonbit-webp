@@ -488,6 +488,12 @@ pub fn AnimationDecoder::new(
       "canvas size \{width}x\{height} exceeds \{max_pixels} pixels",
     )
   }
+  // with a raised max_pixels, 4 bytes per pixel can outgrow an array
+  if width.to_int64() * height.to_int64() * 4L > 0x7fffffffL {
+    raise TooLarge(
+      "canvas size \{width}x\{height} is too large for one RGBA buffer",
+    )
+  }
   { webp_data, source: Animated(Compositor::new(animation)), }
 }
 
