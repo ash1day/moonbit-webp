@@ -548,3 +548,19 @@ test "every ANIM chunk must be at least 6 bytes with padding" {
     )
   }
 }
+
+///|
+test "frames whose chunks have odd sizes and padding" {
+  // blend_odd.webp is blend.webp with every chunk inside the ANMF chunks
+  // made odd-sized; tools/anim_oracle gives the same canvases
+  check_canvases("animated-extra/blend_odd", [
+    (100, "439ffb319c936c9768a4b07b7eea2c3a"),
+    (150, "064f848a7537bea10f8c790e006885af"),
+    (220, "e9eec226f69f028545702a9d41d8dab9"),
+    (250, "46e71583aa1057196f4865c11b0d6296"),
+    (250, "9a957974da1333baf3f32a932d372624"),
+    (290, "8d315035c5969b5d68126ebf629975e6"),
+    (350, "24afee6af2b86be85322deecc15e4a6d"),
+    (440, "3088772901be2c80cee96b6b8c077017"),
+  ])
+}

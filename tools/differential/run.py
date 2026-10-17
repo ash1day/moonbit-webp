@@ -64,7 +64,7 @@ TRUNCATED_FILES = SINGLE_BYTE_FILES + [name for name, _ in TOKEN_FILES]
 # at most this many truncation lengths per chunk; longer chunks are sampled
 MAX_TRUNCATIONS = 300
 
-ANIMATED_FILES = ["animated-extra/offsets", "animated-extra/blend"]
+ANIMATED_FILES = ["animated-extra/offsets", "animated-extra/blend", "animated-extra/blend_odd"]
 
 # DECODER can name another build, e.g. "node _build/js/release/build/
 # tools/differential/differential.js" after moon build --target js --release

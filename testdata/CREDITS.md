@@ -54,3 +54,6 @@ frame's (`absolute_delta = 0`).
 - relative_segments: `WEBP_TEST_RELATIVE=1 cwebp -q 60 -f 40 src.pam`
 - lf_delta_relative_sharpness5: both variables, `cwebp -q 60 -f 40 -sharpness 5 src.pam`
 - sharpness3, sharpness6: unpatched `cwebp -q 60 -f 40 -sharpness 3` (and 6)
+- blend_odd: `python3 make_odd.py blend.webp blend_odd.webp` appends a zero
+  byte to every even-sized chunk inside the ANMF chunks of blend.webp, so
+  that every frame chunk has an odd size and a padding byte.
