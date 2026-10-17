@@ -25,3 +25,20 @@ Made for this repository from `lossy/1.webp` and `alpha-extra/alpha_filter_1.web
   webpmux -frame f1.webp +100+0+0+0+b -frame f2.webp +80+12+8+0+b \
     -frame f3.webp +60+30+20+1-b -loop 3 -bgcolor 255,16,32,48 -o offsets.webp
   ```
+- blend: eight frames with semi-transparent and fully transparent pixels,
+  overlapping so that they go through every blending and dispose case of
+  libwebp's WebPAnimDecoder. `make_blend_frames.py` (needs Pillow) draws
+  `f1.png` to `f8.png`:
+
+  ```bash
+  python3 make_blend_frames.py
+  for i in 1 2 4 5 7; do cwebp -lossless -exact f$i.png -o f$i.webp; done
+  cwebp -q 80 -exact f3.png -o f3.webp
+  cwebp -q 80 -noalpha f6.png -o f6.webp
+  cwebp -q 75 -exact f8.png -o f8.webp
+  webpmux -frame f1.webp +100+0+0+0+b -frame f2.webp +50+20+10+1+b \
+    -frame f3.webp +70+10+8+0+b -frame f4.webp +30+0+0+1-b \
+    -frame f5.webp +0+4+4+0+b -frame f6.webp +40+40+30+1+b \
+    -frame f7.webp +60+36+20+0+b -frame f8.webp +90+0+0+0+b \
+    -loop 0 -bgcolor 128,0,255,0 -o blend.webp
+  ```

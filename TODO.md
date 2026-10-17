@@ -50,7 +50,7 @@
   - [x] ANIM: 背景色とループ回数。アニメーションのフラグがあるのに ANIM がなければエラー
   - [x] 上の demux 規則（2^32 画素以上のキャンバスと ANMF、フレームの中身が ANMF に収まるか、フレームの大きさはビットストリームから、も含む）
   - [x] 各フレームを単独でデコードし、`webpmux -get frame n` + dwebp と照合
-  - [ ] 合成（blend / dispose）して `tools/anim_oracle` と照合
+  - [x] 合成（blend / dispose）して `tools/anim_oracle` と照合
   - [ ] 公開 API（`AnimationDecoder`）。`max_pixels` を Int64 の面積で照合
   - [ ] 項目を 1 つずつ済ませるたびに `#warnings` を外せるか確認する
 - [ ] mooncakes.io への publish（2026-10-16 時点の判断: 今は公開しない。dry-run は成功済み）
