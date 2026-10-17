@@ -41,6 +41,12 @@ fn read_chunk_type(data : Bytes, offset : Int32) -> ChunkType {
 }
 
 ///|
+/// Whether a chunk header (8 bytes) fits between `pos` and `end`
+fn has_chunk_header(pos : Int32, end : Int32) -> Bool {
+  pos <= end && end - pos >= 8
+}
+
+///|
 pub fn parse(data : Bytes) -> WebPFile? {
   if data.length() < 12 {
     return None
@@ -57,12 +63,12 @@ pub fn parse(data : Bytes) -> WebPFile? {
   // Parse chunks starting at offset 12
   let chunks : Array[Chunk] = []
   let mut pos = 12
-  let end = if file_size + 8 < data.length() {
+  let end = if file_size >= 0 && file_size < data.length() - 8 {
     file_size + 8
   } else {
     data.length()
   }
-  while pos + 8 <= end {
+  while has_chunk_header(pos, end) {
     let chunk_type = read_chunk_type(data, pos)
     let chunk_size = read_u32_le(data, pos + 4)
     if chunk_size < 0 {

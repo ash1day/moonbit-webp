@@ -140,3 +140,12 @@ test "parse stops after the image chunk like libwebp" {
   assert_eq(file.chunks.length(), 1)
   assert_eq(file.chunks[0].chunk_type, ChunkType::VP8)
 }
+
+///|
+test "the chunk header check does not overflow near Int32 max" {
+  // a 2 GiB input can leave the next chunk 2 bytes before its end
+  assert_eq(has_chunk_header(0x7ffffffc, 0x7ffffffe), false)
+  assert_eq(has_chunk_header(0x7ffffff6, 0x7ffffffe), true)
+  assert_eq(has_chunk_header(12, 20), true)
+  assert_eq(has_chunk_header(13, 20), false)
+}
