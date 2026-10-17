@@ -53,8 +53,8 @@ while decoder.next_frame() is Some(frame) {
 
 Frames are decoded one at a time, so memory stays at a few canvases however
 many frames there are. A still image gives one frame, decoded exactly like
-`decode` does (which in malformed files can differ from `WebPAnimDecoder`,
-since libwebp reads still images there through its demuxer). The background color
+`decode`. libwebp's `WebPAnimDecoder` reads still images through its
+demuxer, so on malformed files the two can differ. The background color
 of the file is available as `decoder.background_color()`, but, as in
 libwebp, frames are drawn on a transparent canvas.
 
