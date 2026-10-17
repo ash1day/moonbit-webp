@@ -36,14 +36,14 @@
 - [x] ALPH チャンクは libwebp と同じく VP8 より前の最後の 1 つを使い、VP8 より後ろは無視する。VP8X がないときは最初のチャンクが VP8 / VP8L でなければエラー（dwebp で確認）
 - [x] VP8X のキャンバスサイズを、libwebp と同じくフレームヘッダーだけ読んでデコードの前に照合する
 - [x] `decode` は RIFF を 1 回だけ解析するが、`decode_vp8` / `decode_vp8l` がファイル全体を受け取って解析し直し、チャンクもコピーしている。ビットストリームを受け取る `decode_bitstream` を切り出し、`decode` はそちらを呼ぶ（圧縮データのコピーは 1 回残る。画素のバッファに比べて小さい）
-- [ ] アニメーション（ANIM / ANMF）。正解は libwebp の `WebPAnimDecoder`（`tools/anim_oracle`）。`anim_dump` は透明な画素の色を 0 にしてから書き出すので使わない
+- [x] アニメーション（ANIM / ANMF）。正解は libwebp の `WebPAnimDecoder`（`tools/anim_oracle`）。`anim_dump` は透明な画素の色を 0 にしてから書き出すので使わない
   - 設計
     - 公開 API: `decode` とは別に、`AnimationDecoder::new(webp_data, max_pixels?)` と、合成済みのキャンバス全体（RGBA、premultiply なし、毎回コピー）と時刻を 1 フレームずつ返す `next_frame()`。全フレームを配列で返すとメモリがキャンバス × フレーム数になり `max_pixels` で抑えられない。libwebp と同じく ANIM の背景色は合成に使わず（透明な黒で始める）、値だけ返す
     - キャンバスの幅と高さは 24 ビットなので、面積は Int64 で `max_pixels` と比べる（libwebp は 2^32 以上を拒否）
     - チャンクの走査: libwebp の demux は ANMF の 16 バイトのヘッダーの後のチャンクをそのフレームのものとして読み、そのまま最上位の走査を続ける（ANMF のサイズで読み飛ばさず、フレームの中身が ANMF に収まるかだけ確かめる）。`riff.parse` の走査を `parse_chunks` に切り出し、ANMF に入る読み方を加える
     - libwebp の demux 規則: ANIM は ANMF より前（ANIM が 6 バイト未満ならエラー、2 つ目は無視）、アニメーションのファイルの最上位に ALPH / VP8 / VP8L があればエラー、ANMF の中の ALPH の後に VP8L があればエラー、画像のないフレームはエラー、フレームが 1 つもなければエラー、VP8X の未定義のフラグはエラー、2 つ目の VP8X はエラー、フレームがキャンバスからはみ出したらエラー、RIFF の終わりがチャンクの境界でなければエラー
     - フレームの幅と高さは ANMF のヘッダーではなくビットストリームの値を使う（libwebp の SetFrameInfo が上書きする）。ビットストリームは入力の末尾ではなく画像チャンク（パディング込み）の末尾まで
-  - [x] ANMF の切り出し: フレーム数と各フレームの矩形（x, y, 幅, 高さ）を webpinfo と照合（`anim.mbt` の `parse_frames`。公開 API から呼ぶまで未使用の警告を `#warnings` で抑えている）
+  - [x] ANMF の切り出し: フレーム数と各フレームの矩形（x, y, 幅, 高さ）を webpinfo と照合（`anim.mbt` の `parse_frames`）
   - [x] ANMF のフィールド: 表示時間、dispose、blend
   - [x] `riff.parse` の走査を `parse_chunks` に切り出し、ANMF の中のチャンク（ALPH と VP8 / VP8L）を取り出す
   - [x] フレームの矩形がキャンバスからはみ出したらエラー（ANMF が 16 バイト未満ならエラーは済み）
@@ -51,8 +51,8 @@
   - [x] 上の demux 規則（2^32 画素以上のキャンバスと ANMF、フレームの中身が ANMF に収まるか、フレームの大きさはビットストリームから、も含む）
   - [x] 各フレームを単独でデコードし、`webpmux -get frame n` + dwebp と照合
   - [x] 合成（blend / dispose）して `tools/anim_oracle` と照合
-  - [ ] 公開 API（`AnimationDecoder`）。`max_pixels` を Int64 の面積で照合
-  - [ ] 項目を 1 つずつ済ませるたびに `#warnings` を外せるか確認する
+  - [x] 公開 API（`AnimationDecoder`）。`max_pixels` を Int64 の面積で照合。静止画は libwebp と同じく 1 フレーム（時刻 0、ループ 1 回、背景色 0xffffffff）として `decode` と同じ画素を返す
+  - [x] 項目を 1 つずつ済ませるたびに `#warnings` を外せるか確認する（公開 API から呼ぶようになってすべて外した）
 - [ ] mooncakes.io への publish（2026-10-16 時点の判断: 今は公開しない。dry-run は成功済み）
 
 ## 公開の準備

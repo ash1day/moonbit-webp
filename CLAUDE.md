@@ -4,7 +4,8 @@ pure MoonBit の WebP デコーダライブラリ。mooncakes.io への公開を
 
 ## 開発ルール
 
-- **公開API**: ルートパッケージの `pub fn decode(webp_data : Bytes, max_pixels? : Int = MAX_PIXELS) -> ImageData raise DecodeError` だけ。ヘッダーだけ読んでキャンバスサイズと `max_pixels` を照合してからデコードする
+- **公開API**: ルートパッケージの `pub fn decode(webp_data : Bytes, max_pixels? : Int = MAX_PIXELS) -> ImageData raise DecodeError` と `AnimationDecoder`（`new(webp_data, max_pixels?)`、`next_frame() -> AnimationFrame?`、`width` / `height` / `frame_count` / `loop_count` / `background_color`）。ヘッダーだけ読んでキャンバスサイズと `max_pixels` を照合してからデコードする
+- **アニメーション**: libwebp の `WebPAnimDecoder` と同じく合成済みのキャンバス全体を 1 フレームずつ返す（毎回コピー）。正解は `tools/anim_oracle`（`anim_dump` は透明な画素の色を消すので使わない）。構造の検査は libwebp の demuxer（`src/demux/demux.c`）に合わせる
 - **出力型**: `ImageData { width : Int, height : Int, data : Bytes }`（RGBA8、premultiply しない）
 - **エラー型**: `DecodeError { Invalid(String), Unsupported(String), TooLarge(String) }`。`Show` を実装する
 - **共通の型**: `ImageData` と `DecodeError` は `image/` に置き、ルートが `pub using` で再公開する
@@ -38,4 +39,5 @@ internal/
   vp8/            # VP8 (lossy) デコーダ
 testdata/         # テスト画像（.moonignore でパッケージから除外）
 tools/differential/  # 壊れたファイルを libwebp と比べる差分テスト（run.py）
+tools/anim_oracle/   # libwebp の WebPAnimDecoder の出力（アニメーションの正解）
 ```
