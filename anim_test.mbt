@@ -157,3 +157,29 @@ test "AnimationDecoder rejects a canvas whose RGBA does not fit in an array" {
     _ => fail("expected TooLarge")
   }
 }
+
+///|
+test "a still image that fails to decode fails again on the next call" {
+  // 1_webp_ll.webp with its VP8L payload cut to 100 bytes and the sizes
+  // fixed: the header is fine, the pixel data is not. Like an animation
+  // frame, the frame is not skipped after an error.
+  let data = @fs.read_file_to_bytes("testdata/lossless/1_webp_ll.webp")
+  let cut = Bytes::makei(120, fn(i) {
+    match i {
+      4 => b'\x70' // RIFF size 112
+      5 | 6 | 7 => b'\x00'
+      16 => b'\x64' // VP8L size 100
+      17 | 18 | 19 => b'\x00'
+      _ => data[i]
+    }
+  })
+  let decoder = @webp.AnimationDecoder::new(cut)
+  for attempt in 0..<2 {
+    try decoder.next_frame() |> ignore catch {
+      Invalid(_) => ()
+      e => fail("expected Invalid, got \{e}")
+    } noraise {
+      _ => fail("expected Invalid on attempt \{attempt}")
+    }
+  }
+}

@@ -511,12 +511,10 @@ pub fn AnimationDecoder::next_frame(
   match self.source {
     Still(_, { val: true, }) => None
     Still(still, done) => {
+      let image = decode_still(self.webp_data, still)
+      // only after success, so that an error is raised again next time
       done.val = true
-      Some({
-        image: decode_still(self.webp_data, still),
-        timestamp: 0,
-        duration: 0,
-      })
+      Some({ image, timestamp: 0, duration: 0, })
     }
     Animated(compositor) => {
       guard compositor.draw_next(self.webp_data) is Some(timestamp) else {
