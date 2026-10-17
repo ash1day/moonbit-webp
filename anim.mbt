@@ -20,13 +20,29 @@ fn animation_chunks(webp_data : Bytes) -> Array[@riff.Chunk] raise DecodeError {
   guard @riff.parse(webp_data) is Some(file) else {
     raise Invalid("invalid RIFF/WebP header")
   }
-  let end = if file.file_size >= 0 && file.file_size < webp_data.length() - 8 {
-    file.file_size + 8
-  } else {
-    webp_data.length()
+  // like libwebp's demuxer, which reads nothing after the RIFF data
+  if file.file_size < 0 || file.file_size > webp_data.length() - 8 {
+    raise Invalid("file is shorter than the RIFF size")
   }
+  let end = file.file_size + 8
   guard @riff.parse_chunks(webp_data, 12, end, frames=true) is Some(chunks) else {
     raise Invalid("chunk size too large")
+  }
+  // every chunk must fit, and the RIFF data must end after a whole chunk
+  let mut pos = 12
+  for chunk in chunks {
+    if chunk.size > end - chunk.offset - chunk.size % 2 {
+      raise Invalid("\{chunk.chunk_type.fourcc()} chunk exceeds the RIFF size")
+    }
+    // the scan continues inside ANMF chunks, after the frame header
+    pos = if chunk.chunk_type is ANMF && chunk.size >= 16 {
+      chunk.offset + 16
+    } else {
+      chunk.offset + chunk.size + chunk.size % 2
+    }
+  }
+  if pos != end {
+    raise Invalid("\{end - pos} bytes after the last chunk")
   }
   chunks
 }

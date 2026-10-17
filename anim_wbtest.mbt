@@ -295,3 +295,46 @@ test "a second VP8X chunk in an animation raises DecodeError" {
   let (vp8x, _, _) = offsets_parts()
   check_animation_error(offsets_with([("VP8X", vp8x)], 5), "second VP8X chunk")
 }
+
+///|
+/// `data` with `extra` appended inside the RIFF data, and the RIFF size
+/// changed by `riff_delta` beyond that
+fn with_riff_tail(data : Bytes, extra : Bytes, riff_delta : Int32) -> Bytes {
+  let buf = Buffer()
+  buf.write_bytes(data)
+  buf.write_bytes(extra)
+  let out = buf.to_bytes()
+  let size = data.length() - 8 + extra.length() + riff_delta
+  Bytes::makei(out.length(), fn(i) {
+    if i >= 4 && i < 8 {
+      (size >> (8 * (i - 4))).to_byte()
+    } else {
+      out[i]
+    }
+  })
+}
+
+///|
+test "the RIFF data of an animation must end at a chunk boundary" {
+  // libwebp's demuxer needs a whole chunk header after each chunk until the
+  // end of the RIFF data; tools/anim_oracle prints "error" for the first two
+  // files and decodes the last two
+  let data = @fs.read_file_to_bytes("testdata/animated-extra/offsets.webp")
+  check_animation_error(
+    with_riff_tail(data, b"abc", 0),
+    "3 bytes after the last chunk",
+  )
+  check_animation_error(
+    with_riff_tail(data, b"", 2),
+    "file is shorter than the RIFF size",
+  )
+  // bytes after the RIFF data are ignored, and so are unknown chunks
+  assert_eq(
+    parse_animation(with_riff_tail(data, b"\x00\x00", -2)).frames.length(),
+    3,
+  )
+  assert_eq(
+    parse_animation(with_riff_tail(data, b"JUNK\x03\x00\x00\x00xyz\x00", 0)).frames.length(),
+    3,
+  )
+}
