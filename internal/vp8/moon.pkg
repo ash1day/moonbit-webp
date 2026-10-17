@@ -7,3 +7,10 @@ import {
   "moonbitlang/x/fs",
   "moonbitlang/x/crypto",
 } for "wbtest"
+
+options(
+  targets: {
+    "bool_decoder_js.mbt": [ "js" ],
+    "bool_decoder_u64.mbt": [ "not", "js" ],
+  },
+)
