@@ -26,7 +26,7 @@ pub fn decode(
       Some(parse_vp8x(payload(webp_data, chunk)))
     _ => None
   }
-  check_riff_size(webp_data, file)
+  check_riff_size(webp_data, file, padded=vp8x is Some(_))
   if vp8x is None {
     check_simple_format(file)
   }
@@ -79,10 +79,12 @@ fn decode_lossy(
 }
 
 ///|
-/// Like libwebp, rejects chunks that extend past the size in the RIFF header
+/// Like libwebp, rejects chunks that extend past the size in the RIFF header.
+/// In the extended format libwebp counts the padding of odd-sized chunks too.
 fn check_riff_size(
   webp_data : Bytes,
   file : @riff.WebPFile,
+  padded~ : Bool,
 ) -> Unit raise DecodeError {
   // the size field counts from byte 8; the chunks before the image must fit
   if file.file_size < 0 || file.file_size > webp_data.length() - 8 {
@@ -90,7 +92,9 @@ fn check_riff_size(
   }
   let riff_end = file.file_size + 8
   for chunk in file.chunks {
-    if chunk.offset > riff_end || chunk.size > riff_end - chunk.offset {
+    // subtracting the padding cannot overflow, adding it to the size can
+    let padding = if padded { chunk.size % 2 } else { 0 }
+    if chunk.offset > riff_end || chunk.size > riff_end - chunk.offset - padding {
       raise Invalid("\{chunk.chunk_type.fourcc()} chunk exceeds the RIFF size")
     }
   }

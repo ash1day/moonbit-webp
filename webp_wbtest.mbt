@@ -466,3 +466,40 @@ test "VP8X is read only from the first chunk" {
     "ICCP chunk before the image without VP8X",
   )
 }
+
+///|
+/// Returns the file with the RIFF size one byte smaller, so that it leaves
+/// out the padding byte of an odd-sized last chunk
+fn without_padding_in_riff_size(data : Bytes) -> Bytes {
+  Bytes::makei(data.length(), fn(i) {
+    if i == 4 {
+      data[4] - 1
+    } else {
+      data[i]
+    }
+  })
+}
+
+///|
+test "with VP8X the RIFF size must include chunk padding" {
+  // libwebp's ParseOptionalChunks counts padded chunk sizes; without VP8X
+  // only the payload is checked. Both results are from dwebp.
+  let (vp8x, _, vp8) = alpha_test_chunks()
+  let odd_vp8 = Bytes::makei(vp8.length() + 1, fn(i) {
+    if i < vp8.length() {
+      vp8[i]
+    } else {
+      b'\x00'
+    }
+  })
+  check_error(
+    without_padding_in_riff_size(
+      build_webp([("VP8X", vp8x), ("VP8 ", odd_vp8)]),
+    ),
+    "VP8 chunk exceeds the RIFF size",
+  )
+  let simple = decode(
+    without_padding_in_riff_size(build_webp([("VP8 ", odd_vp8)])),
+  )
+  assert_eq(md5_hex(simple.data), "877731de5af73ba624d64cd36bf74d61")
+}
