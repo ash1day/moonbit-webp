@@ -479,7 +479,11 @@ priv enum FrameSource {
 /// canvas has more than `max_pixels` pixels.
 ///
 /// Like libwebp's WebPAnimDecoder, a still image is an animation of one frame
-/// at time 0 that plays once; it decodes like `decode`.
+/// at time 0 that plays once. Its pixels and checks are those of `decode`
+/// (dwebp), not of WebPAnimDecoder, which reads still images through its
+/// demuxer: in malformed files they can differ, for example on an ALPH chunk
+/// without the alpha flag in VP8X, which `decode` applies and the demuxer
+/// drops.
 pub fn AnimationDecoder::new(
   webp_data : Bytes,
   max_pixels~ : Int32 = MAX_PIXELS,

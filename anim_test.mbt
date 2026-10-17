@@ -183,3 +183,26 @@ test "a still image that fails to decode fails again on the next call" {
     }
   }
 }
+
+///|
+test "a still image in AnimationDecoder follows decode, not the demuxer" {
+  // 1_webp_a.webp without the alpha flag in VP8X (byte 20). decode, like
+  // dwebp, still applies the ALPH chunk; libwebp's WebPAnimDecoder reads
+  // still images through its demuxer, which drops the alpha (MD5
+  // 01475fe29f24f96bfbfb02f398e9e558). AnimationDecoder follows decode.
+  let data = @fs.read_file_to_bytes("testdata/alpha/1_webp_a.webp")
+  let no_flag = Bytes::makei(data.length(), fn(i) {
+    if i == 20 {
+      (data[i].to_int() & 0xef).to_byte()
+    } else {
+      data[i]
+    }
+  })
+  assert_eq(
+    md5_of(@webp.decode(no_flag).data),
+    "650645a89c80efea0a88fe17ed893c73",
+  )
+  let decoder = @webp.AnimationDecoder::new(no_flag)
+  guard decoder.next_frame() is Some(frame) else { fail("expected a frame") }
+  assert_eq(md5_of(frame.image.data), "650645a89c80efea0a88fe17ed893c73")
+}

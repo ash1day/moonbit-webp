@@ -5,7 +5,7 @@ pure MoonBit の WebP デコーダライブラリ。mooncakes.io への公開を
 ## 開発ルール
 
 - **公開API**: ルートパッケージの `pub fn decode(webp_data : Bytes, max_pixels? : Int = MAX_PIXELS) -> ImageData raise DecodeError` と `AnimationDecoder`（`new(webp_data, max_pixels?)`、`next_frame() -> AnimationFrame?`、`width` / `height` / `frame_count` / `loop_count` / `background_color`）。ヘッダーだけ読んでキャンバスサイズと `max_pixels` を照合してからデコードする
-- **アニメーション**: libwebp の `WebPAnimDecoder` と同じく合成済みのキャンバス全体を 1 フレームずつ返す（毎回コピー）。正解は `tools/anim_oracle`（`anim_dump` は透明な画素の色を消すので使わない）。構造の検査は libwebp の demuxer（`src/demux/demux.c`）に合わせる
+- **アニメーション**: libwebp の `WebPAnimDecoder` と同じく合成済みのキャンバス全体を 1 フレームずつ返す（毎回コピー）。正解は `tools/anim_oracle`（`anim_dump` は透明な画素の色を消すので使わない）。アニメーションの構造の検査は libwebp の demuxer（`src/demux/demux.c`）に合わせる。静止画を `AnimationDecoder` に渡したときは `decode`（dwebp）と同じ規則で読む（libwebp の WebPAnimDecoder は静止画も demuxer で読むので、壊れたファイルでは結果が違うことがある）
 - **出力型**: `ImageData { width : Int, height : Int, data : Bytes }`（RGBA8、premultiply しない）
 - **エラー型**: `DecodeError { Invalid(String), Unsupported(String), TooLarge(String) }`。`Show` を実装する
 - **共通の型**: `ImageData` と `DecodeError` は `image/` に置き、ルートが `pub using` で再公開する

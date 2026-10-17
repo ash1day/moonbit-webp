@@ -52,7 +52,9 @@ while decoder.next_frame() is Some(frame) {
 ```
 
 Frames are decoded one at a time, so memory stays at a few canvases however
-many frames there are. A still image gives one frame. The background color
+many frames there are. A still image gives one frame, decoded exactly like
+`decode` does (which in malformed files can differ from `WebPAnimDecoder`,
+since libwebp reads still images there through its demuxer). The background color
 of the file is available as `decoder.background_color()`, but, as in
 libwebp, frames are drawn on a transparent canvas.
 
@@ -97,8 +99,8 @@ Decoding a lossy image needs about 6 bytes of memory per pixel, including the
 - Alpha for lossy images (the ALPH chunk), uncompressed or compressed, with
   every filter
 - Animations (ANIM and ANMF chunks): frame offsets, alpha blending and both
-  dispose methods, with the same checks of the file structure as libwebp's
-  demuxer
+  dispose methods, with the same checks of an animated file's structure as
+  libwebp's demuxer
 
 Not supported:
 
