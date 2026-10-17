@@ -220,3 +220,34 @@ test "image chunks outside the frames of an animation raise DecodeError" {
     "ALPH chunk outside the frames of an animation",
   )
 }
+
+///|
+/// offsets.webp with the chunks inside frame `index` replaced
+fn offsets_with_frame(
+  index : Int32,
+  inner : Array[(String, Bytes)],
+) -> Bytes raise {
+  let (vp8x, anim, frames) = offsets_parts()
+  build_webp(
+    [("VP8X", vp8x), ("ANIM", anim)] +
+    frames.mapi(fn(i, f) { anmf(f.0, if i == index { inner } else { f.1 }) }),
+  )
+}
+
+///|
+test "a frame with ALPH before VP8L or after its image raises DecodeError" {
+  // VP8L carries its own alpha; libwebp's demuxer rejects both files
+  // (tools/anim_oracle prints "error")
+  let (_, _, frames) = offsets_parts()
+  let vp8l = frames[0].1[0]
+  let vp8 = frames[1].1[0]
+  let alph = frames[2].1[0]
+  check_animation_error(
+    offsets_with_frame(0, [alph, vp8l]),
+    "ALPH chunk before a VP8L chunk in frame 1",
+  )
+  check_animation_error(
+    offsets_with_frame(1, [vp8, alph]),
+    "ALPH chunk after the image in frame 2",
+  )
+}

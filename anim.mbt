@@ -53,7 +53,7 @@ fn parse_frames(
         }
         // only the frame header; the frame's chunks follow it
         let anmf = Bytes::makei(16, fn(j) { webp_data[chunk.offset + j] })
-        let (alpha, image, next) = frame_chunks(chunks, i)
+        let (alpha, image, next) = frame_chunks(chunks, i, frames.length() + 1)
         i = next
         // offsets are stored divided by 2, sizes minus 1
         frames.push({
@@ -82,17 +82,22 @@ fn parse_frames(
 ///|
 /// The ALPH and image chunks of the frame whose chunks start at `start`, and
 /// the index after them. Like libwebp's StoreFrame, takes at most one of each
-/// and stops at any other chunk.
+/// and stops at any other chunk. `frame` (from 1) is for error messages.
 fn frame_chunks(
   chunks : Array[@riff.Chunk],
   start : Int32,
+  frame : Int32,
 ) -> (@riff.Chunk?, @riff.Chunk, Int32) raise DecodeError {
   let mut alpha = None
   let mut image = None
   let mut next = start
   while next < chunks.length() {
     match (chunks[next].chunk_type, alpha, image) {
-      (ALPH, None, _) => alpha = Some(chunks[next])
+      (ALPH, None, Some(_)) =>
+        raise Invalid("ALPH chunk after the image in frame \{frame}")
+      (ALPH, None, None) => alpha = Some(chunks[next])
+      (VP8L, Some(_), None) =>
+        raise Invalid("ALPH chunk before a VP8L chunk in frame \{frame}")
       (VP8 | VP8L, _, None) => image = Some(chunks[next])
       _ => break
     }
